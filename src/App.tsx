@@ -8,11 +8,13 @@ import {
   ChartBarIcon,
   CheckIcon,
   NotebookIcon,
-  TargetIcon,
 } from './components/icons'
+import { OfflineBanner } from './components/pwa/OfflineBanner'
+import { UpdatePrompt } from './components/pwa/UpdatePrompt'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminStaffPage } from './pages/AdminStaffPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { KrasPage } from './pages/KrasPage'
 import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { SignupPage } from './pages/SignupPage'
@@ -37,16 +39,7 @@ export default function App() {
                 />
               }
             />
-            <Route
-              path="kras"
-              element={
-                <PlaceholderPage
-                  title="KRAs"
-                  description="Submit and track your key result areas for each term. This page is coming soon."
-                  icon={TargetIcon}
-                />
-              }
-            />
+            <Route path="kras" element={<KrasPage />} />
             <Route
               path="scheme-books"
               element={
@@ -84,6 +77,7 @@ export default function App() {
           <Route path="/admin" element={<DashboardLayout variant="admin" />}>
             <Route index element={<AdminDashboardPage />} />
             <Route path="staff" element={<AdminStaffPage />} />
+            <Route path="kras" element={<KrasPage />} />
             <Route
               path="attendance"
               element={
@@ -119,6 +113,9 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      <OfflineBanner />
+      <UpdatePrompt />
     </BrowserRouter>
   )
 }

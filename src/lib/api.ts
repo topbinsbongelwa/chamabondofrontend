@@ -6,6 +6,12 @@ import {
   type AttendanceSummary,
 } from './attendance'
 import { getToken, logout, setToken, setUser, type StoredUser } from './auth'
+import {
+  normalizeKra,
+  normalizeKraList,
+  type Kra,
+  type KraInput,
+} from './kras'
 import { normalizeStaffList, type StaffMember } from './staff'
 import { normalizeEcNumber, normalizePhone, type SignupValues } from './validation'
 
@@ -353,4 +359,85 @@ export async function fetchStaffDirectory(): Promise<StaffMember[]> {
     }
     throw error
   }
+}
+
+function kraPath(id: string | number, suffix = ''): string {
+  return `/api/kras/${encodeURIComponent(String(id))}${suffix}`
+}
+
+export async function fetchKras(): Promise<Kra[]> {
+  const payload = await request<unknown>('/api/kras')
+  return normalizeKraList(payload)
+}
+
+export async function fetchReviewKras(): Promise<Kra[]> {
+  const payload = await request<unknown>('/api/kras/review')
+  return normalizeKraList(payload)
+}
+
+export async function createKra(
+  input: KraInput,
+  submit: boolean,
+): Promise<Kra | null> {
+  const payload = await request<unknown>('/api/kras', {
+    method: 'POST',
+    body: {
+      ...input,
+      status: submit ? 'pending' : 'draft',
+    },
+  })
+
+  return normalizeKra(payload)
+}
+
+export async function updateKra(
+  id: string | number,
+  input: KraInput,
+  submit: boolean,
+): Promise<Kra | null> {
+  const payload = await request<unknown>(kraPath(id), {
+    method: 'PATCH',
+    body: {
+      ...input,
+      status: submit ? 'pending' : 'draft',
+    },
+  })
+
+  return normalizeKra(payload)
+}
+
+export async function deleteKra(id: string | number): Promise<void> {
+  await request<void>(kraPath(id), { method: 'DELETE' })
+}
+
+export async function updateKraProgress(
+  id: string | number,
+  progress: number,
+): Promise<Kra | null> {
+  const payload = await request<unknown>(kraPath(id, '/progress'), {
+    method: 'PATCH',
+    body: { progress },
+  })
+
+  return normalizeKra(payload)
+}
+
+export async function approveKra(id: string | number): Promise<Kra | null> {
+  const payload = await request<unknown>(kraPath(id, '/approve'), {
+    method: 'PATCH',
+  })
+
+  return normalizeKra(payload)
+}
+
+export async function rejectKra(
+  id: string | number,
+  comment: string,
+): Promise<Kra | null> {
+  const payload = await request<unknown>(kraPath(id, '/reject'), {
+    method: 'PATCH',
+    body: { comment },
+  })
+
+  return normalizeKra(payload)
 }

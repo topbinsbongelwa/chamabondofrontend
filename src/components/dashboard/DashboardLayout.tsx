@@ -4,6 +4,7 @@ import { getDisplayName, getInitials, logout } from '../../lib/auth'
 import { getRoleLabel } from '../../lib/roles'
 import { Crest } from '../Crest'
 import { CloseIcon, LogoutIcon, MenuIcon } from '../icons'
+import { InstallAppButton } from '../pwa/InstallAppButton'
 import { ADMIN_LINKS, Sidebar, TEACHER_LINKS } from './Sidebar'
 
 interface DashboardLayoutProps {
@@ -74,6 +75,8 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
           </Link>
 
           <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
+            <InstallAppButton />
+
             <div className="min-w-0 text-right">
               <p className="max-w-[88px] truncate text-xs font-semibold text-slate-800 sm:max-w-[180px] sm:text-sm">
                 {teacherName}
