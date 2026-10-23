@@ -50,6 +50,17 @@ export function CalendarIcon(props: IconProps) {
   )
 }
 
+export function MegaphoneIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h2l-2-6" />
+      <path d="M7 9v6" />
+      <path d="M7 9 19 4v16L7 15" />
+      <path d="M19 9a3 3 0 0 1 0 6" />
+    </svg>
+  )
+}
+
 export function EyeIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

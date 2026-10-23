@@ -78,9 +78,13 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
             <InstallAppButton />
 
             <div className="min-w-0 text-right">
-              <p className="max-w-[88px] truncate text-xs font-semibold text-slate-800 sm:max-w-[180px] sm:text-sm">
+              <Link
+                to="/account"
+                aria-label="Open account settings"
+                className="block max-w-[88px] truncate text-xs font-semibold text-slate-800 transition hover:text-primary sm:max-w-[180px] sm:text-sm"
+              >
                 {teacherName}
-              </p>
+              </Link>
               <p className="hidden text-[10px] font-medium uppercase tracking-wide text-slate-400 sm:block">
                 {roleLabel}
               </p>
@@ -182,6 +186,13 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
                     {teacherName}
                   </p>
                   <p className="text-xs text-slate-500">{roleLabel}</p>
+                  <Link
+                    to="/account"
+                    onClick={() => setMenuOpen(false)}
+                    className="mt-1 inline-flex text-xs font-semibold text-primary hover:text-primary-700"
+                  >
+                    Account settings
+                  </Link>
                 </div>
               </div>
             </div>

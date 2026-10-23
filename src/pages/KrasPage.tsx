@@ -7,7 +7,7 @@ import {
   CloseIcon,
   TargetIcon,
 } from '../components/icons'
-import { getRole, isReviewerRole } from '../lib/roles'
+import { getRole } from '../lib/roles'
 
 type Tab = 'mine' | 'review'
 type NoticeTone = 'success' | 'error'
@@ -18,7 +18,7 @@ interface Notice {
 }
 
 export function KrasPage() {
-  const canReview = isReviewerRole(getRole())
+  const canReview = getRole() === 'head'
   const [tab, setTab] = useState<Tab>('mine')
   const [notice, setNotice] = useState<Notice | null>(null)
 

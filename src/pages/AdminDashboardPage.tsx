@@ -1,5 +1,6 @@
 import { StaffDirectory } from '../components/admin/StaffDirectory'
 import { StaffStats } from '../components/admin/StaffStats'
+import { SchoolUpdatesCard } from '../components/dashboard/SchoolUpdatesCard'
 import { useStaffDirectory } from '../hooks/useStaffDirectory'
 import { getDisplayName } from '../lib/auth'
 import { getRoleLabel } from '../lib/roles'
@@ -39,6 +40,8 @@ export function AdminDashboardPage() {
         limit={6}
         viewAllHref="/admin/staff"
       />
+
+      <SchoolUpdatesCard limit={3} />
     </div>
   )
 }

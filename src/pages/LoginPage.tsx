@@ -25,11 +25,13 @@ export function LoginPage() {
 
   const navigate = useNavigate()
   const location = useLocation()
+  const homePath = getHomePath()
   const destination =
-    (location.state as LocationState | null)?.from ?? getHomePath()
+    (location.state as LocationState | null)?.from ??
+    (homePath === '/admin' ? homePath : '/updates')
 
   if (getToken()) {
-    return <Navigate to={getHomePath()} replace />
+    return <Navigate to={destination} replace />
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -45,7 +47,7 @@ export function LoginPage() {
 
     try {
       await login({ ecNumber, password })
-      navigate(destination === '/login' ? '/' : destination, { replace: true })
+      navigate(destination === '/login' ? homePath : destination, { replace: true })
     } catch (loginError) {
       setError(
         loginError instanceof Error

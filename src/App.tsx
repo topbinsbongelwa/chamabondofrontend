@@ -12,11 +12,14 @@ import {
 import { OfflineBanner } from './components/pwa/OfflineBanner'
 import { UpdatePrompt } from './components/pwa/UpdatePrompt'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
+import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
 import { AdminStaffPage } from './pages/AdminStaffPage'
+import { AccountPage } from './pages/AccountPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { KrasPage } from './pages/KrasPage'
 import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { TeacherUpdatesPage } from './pages/TeacherUpdatesPage'
 import { SignupPage } from './pages/SignupPage'
 
 export default function App() {
@@ -29,6 +32,9 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route index element={<DashboardPage />} />
+            <Route path="updates" element={<TeacherUpdatesPage />} />
+            <Route path="account" element={<AccountPage />} />
+            <Route path="profile" element={<Navigate to="/updates" replace />} />
             <Route
               path="attendance"
               element={
@@ -77,6 +83,7 @@ export default function App() {
           <Route path="/admin" element={<DashboardLayout variant="admin" />}>
             <Route index element={<AdminDashboardPage />} />
             <Route path="staff" element={<AdminStaffPage />} />
+            <Route path="announcements" element={<AdminAnnouncementsPage />} />
             <Route path="kras" element={<KrasPage />} />
             <Route
               path="attendance"

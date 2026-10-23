@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { AttendanceSummary } from '../../lib/attendance'
 import { getCurrentUser, getDisplayName, getInitials } from '../../lib/auth'
 import { formatMonthYear } from '../../lib/format'
@@ -126,10 +127,12 @@ export function TeacherProfileCard({
         <p className="text-[11px] font-medium text-slate-400">
           {formatMonthYear(new Date())}
         </p>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-          Signed in
-        </span>
+        <Link
+          to="/updates"
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary transition hover:bg-primary-100"
+        >
+          View updates
+        </Link>
       </div>
     </section>
   )

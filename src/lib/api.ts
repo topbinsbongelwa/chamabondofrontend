@@ -7,6 +7,12 @@ import {
 } from './attendance'
 import { getToken, logout, setToken, setUser, type StoredUser } from './auth'
 import {
+  normalizeAnnouncement,
+  normalizeAnnouncementList,
+  type Announcement,
+  type AnnouncementInput,
+} from './announcements'
+import {
   normalizeKra,
   normalizeKraList,
   type Kra,
@@ -72,8 +78,9 @@ function errorMessage(body: unknown): string | undefined {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true, signal } = options
   const headers = new Headers({ Accept: 'application/json' })
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
 
-  if (body !== undefined) {
+  if (body !== undefined && !isFormData) {
     headers.set('Content-Type', 'application/json')
   }
 
@@ -88,7 +95,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     response = await fetch(`${API_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? (body as FormData)
+            : JSON.stringify(body),
       signal,
     })
   } catch (error) {
@@ -172,6 +184,10 @@ function extractUser(body: unknown): StoredUser | null {
     fullName: asString(candidate.fullName) ?? asString(candidate.full_name),
     ecNumber: asString(candidate.ecNumber) ?? asString(candidate.ec_number),
     email: asString(candidate.email),
+    phone:
+      asString(candidate.phone) ??
+      asString(candidate.phoneNumber) ??
+      asString(candidate.phone_number),
     department: asString(candidate.department),
     role: asString(candidate.role),
     userRole: asString(candidate.userRole) ?? asString(candidate.user_role),
@@ -193,6 +209,26 @@ export interface LoginCredentials {
 export interface LoginResult {
   token: string
   user: StoredUser | null
+}
+
+export interface ProfileUpdates {
+  email: string
+  phone: string
+}
+
+export async function updateMyProfile(
+  updates: ProfileUpdates,
+): Promise<StoredUser> {
+  const payload = await request<unknown>('/api/auth/me', {
+    method: 'PATCH',
+    body: updates,
+  })
+  const record = asRecord(payload)
+  const user = extractUser(record?.user)
+
+  if (!user) throw new ApiError('The server returned an invalid profile.')
+  setUser(user)
+  return user
 }
 
 export async function login(credentials: LoginCredentials): Promise<LoginResult> {
@@ -378,13 +414,16 @@ export async function fetchReviewKras(): Promise<Kra[]> {
 export async function createKra(
   input: KraInput,
   submit: boolean,
+  file?: File | null,
 ): Promise<Kra | null> {
+  const body = new FormData()
+  Object.entries(input).forEach(([key, value]) => body.append(key, value))
+  body.append('status', submit ? 'pending' : 'draft')
+  if (file) body.append('document', file)
+
   const payload = await request<unknown>('/api/kras', {
     method: 'POST',
-    body: {
-      ...input,
-      status: submit ? 'pending' : 'draft',
-    },
+    body,
   })
 
   return normalizeKra(payload)
@@ -394,16 +433,102 @@ export async function updateKra(
   id: string | number,
   input: KraInput,
   submit: boolean,
+  file?: File | null,
 ): Promise<Kra | null> {
+  const body = new FormData()
+  Object.entries(input).forEach(([key, value]) => body.append(key, value))
+  body.append('status', submit ? 'pending' : 'draft')
+  if (file) body.append('document', file)
+
   const payload = await request<unknown>(kraPath(id), {
     method: 'PATCH',
-    body: {
-      ...input,
-      status: submit ? 'pending' : 'draft',
-    },
+    body,
   })
 
   return normalizeKra(payload)
+}
+
+export async function fetchKraDocument(
+  id: string | number,
+): Promise<{ blob: Blob; filename: string }> {
+  const headers = new Headers()
+  const token = getToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  let response: Response
+  try {
+    response = await fetch(`${API_URL}${kraPath(id, '/document')}`, { headers })
+  } catch (error) {
+    if ((error as { name?: string }).name === 'AbortError') throw error
+    throw new ApiError(
+      'Could not reach the server. Check your connection and try again.',
+    )
+  }
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null)
+    throw new ApiError(
+      errorMessage(errorBody) ?? `The request failed (${response.status}).`,
+      response.status,
+    )
+  }
+
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const filename =
+    disposition.match(/filename="([^"]+)"/i)?.[1] ?? 'kra-document'
+  return { blob: await response.blob(), filename }
+}
+
+export async function getKraDocumentUrl(
+  id: string | number,
+): Promise<string> {
+  const payload = await request<unknown>(kraPath(id, '/document-link'))
+  const url = asString(asRecord(payload)?.url)
+  if (!url) throw new ApiError('The server did not return a document link.')
+  return new URL(url, API_URL).toString()
+}
+
+export async function fetchAnnouncements(): Promise<Announcement[]> {
+  const payload = await request<unknown>('/api/announcements')
+  return normalizeAnnouncementList(payload)
+}
+
+export async function createAnnouncement(
+  input: AnnouncementInput,
+): Promise<Announcement> {
+  const payload = await request<unknown>('/api/announcements', {
+    method: 'POST',
+    body: input,
+  })
+  const announcement = normalizeAnnouncement(asRecord(payload)?.announcement)
+  if (!announcement) {
+    throw new ApiError('The server returned an invalid school update.')
+  }
+  return announcement
+}
+
+export async function updateAnnouncement(
+  id: string,
+  input: AnnouncementInput,
+): Promise<Announcement> {
+  const payload = await request<unknown>(
+    `/api/announcements/${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      body: input,
+    },
+  )
+  const announcement = normalizeAnnouncement(asRecord(payload)?.announcement)
+  if (!announcement) {
+    throw new ApiError('The server returned an invalid school update.')
+  }
+  return announcement
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  await request<void>(`/api/announcements/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function deleteKra(id: string | number): Promise<void> {

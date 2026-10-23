@@ -6,6 +6,7 @@ export interface StoredUser {
   fullName?: string
   ecNumber?: string
   email?: string
+  phone?: string
   department?: string
   role?: string
   userRole?: string
@@ -134,6 +135,10 @@ function getUserFromToken(): StoredUser | null {
     fullName: asString(source.fullName) ?? asString(source.full_name),
     ecNumber: asString(source.ecNumber) ?? asString(source.ec_number),
     email: asString(source.email),
+    phone:
+      asString(source.phone) ??
+      asString(source.phoneNumber) ??
+      asString(source.phone_number),
     department: asString(source.department),
     role: asString(source.role),
     userRole: asString(source.userRole) ?? asString(source.user_role),

@@ -1,6 +1,7 @@
 import { formatTerm, type Kra } from '../../lib/kras'
 import { PencilIcon, TrashIcon } from '../icons'
 import { KraStatusBadge } from './KraStatusBadge'
+import { KraDocumentDownload } from './KraDocumentDownload'
 import { ProgressSlider } from './ProgressSlider'
 
 interface KraCardProps {
@@ -62,6 +63,8 @@ export function KraCard({ kra, onEdit, onDelete, onProgress }: KraCardProps) {
           {kra.description}
         </p>
       ) : null}
+
+      <KraDocumentDownload kra={kra} />
 
       <dl className="mt-3 grid gap-2 sm:grid-cols-2">
         <div className="rounded-xl bg-slate-50 p-3">
