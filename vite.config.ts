@@ -70,13 +70,14 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: false,
+        enabled: true,
       },
     }),
   ],
   server: {
     port: 5173,
     host: true,
+    strictPort: true,
   },
   build: {
     target: 'es2019',
