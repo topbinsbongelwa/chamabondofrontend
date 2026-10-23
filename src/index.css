@@ -41,4 +41,33 @@
   .btn-primary {
     @apply inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-b-2 border-transparent bg-primary px-5 py-3 text-base font-semibold text-white transition-colors hover:border-gold hover:bg-primary-600 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
   }
+
+  .kra-range {
+    @apply h-2 w-full cursor-pointer appearance-none rounded-full;
+  }
+
+  .kra-range:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  .kra-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 22px;
+    width: 22px;
+    border-radius: 9999px;
+    border: 3px solid #ffffff;
+    background: #0b5d3b;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.9);
+    cursor: pointer;
+  }
+
+  .kra-range::-moz-range-thumb {
+    height: 18px;
+    width: 18px;
+    border-radius: 9999px;
+    border: 3px solid #ffffff;
+    background: #0b5d3b;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.9);
+    cursor: pointer;
+  }
 }

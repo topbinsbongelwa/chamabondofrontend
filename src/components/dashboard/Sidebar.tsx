@@ -30,6 +30,7 @@ export const TEACHER_LINKS: NavItem[] = [
 export const ADMIN_LINKS: NavItem[] = [
   { to: '/admin', label: 'Overview', icon: DashboardIcon, end: true },
   { to: '/admin/staff', label: 'Staff', icon: UsersIcon },
+  { to: '/admin/kras', label: 'KRAs', icon: TargetIcon },
   { to: '/admin/attendance', label: 'Attendance', icon: CheckIcon },
   { to: '/admin/reports', label: 'Reports', icon: ChartBarIcon },
   { to: '/admin/calendar', label: 'Calendar', icon: CalendarIcon },

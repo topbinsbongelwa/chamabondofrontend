@@ -76,8 +76,16 @@ export function isAdminRole(role: UserRole): boolean {
   return ADMIN_ROLES.includes(role)
 }
 
+export function isReviewerRole(role: UserRole): boolean {
+  return ADMIN_ROLES.includes(role)
+}
+
 export function isAdmin(): boolean {
   return isAdminRole(getRole())
+}
+
+export function isReviewer(): boolean {
+  return isReviewerRole(getRole())
 }
 
 export function getRoleLabel(role: UserRole = getRole()): string {
