@@ -230,7 +230,7 @@ export function SignupForm() {
         label="First name"
         required
         autoComplete="given-name"
-        placeholder="e.g. Talent"
+        placeholder="e.g. Bongelwa"
         value={firstName.field.value}
         onChange={firstName.field.onChange}
         onBlur={firstName.field.onBlur}
@@ -243,7 +243,7 @@ export function SignupForm() {
         label="Surname"
         required
         autoComplete="family-name"
-        placeholder="e.g. Moyo"
+        placeholder="e.g. Ndlovu"
         value={surname.field.value}
         onChange={surname.field.onChange}
         onBlur={surname.field.onBlur}
