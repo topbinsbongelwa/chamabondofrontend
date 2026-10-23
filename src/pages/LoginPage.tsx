@@ -10,6 +10,7 @@ import {
 } from '../components/icons'
 import { login } from '../lib/api'
 import { getToken } from '../lib/auth'
+import { getHomePath } from '../lib/roles'
 
 interface LocationState {
   from?: string
@@ -24,10 +25,11 @@ export function LoginPage() {
 
   const navigate = useNavigate()
   const location = useLocation()
-  const destination = (location.state as LocationState | null)?.from ?? '/'
+  const destination =
+    (location.state as LocationState | null)?.from ?? getHomePath()
 
   if (getToken()) {
-    return <Navigate to="/" replace />
+    return <Navigate to={getHomePath()} replace />
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

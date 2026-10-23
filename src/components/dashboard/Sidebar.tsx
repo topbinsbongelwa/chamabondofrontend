@@ -1,14 +1,24 @@
+import type { ComponentType, SVGProps } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   BookIcon,
   CalendarIcon,
+  ChartBarIcon,
   CheckIcon,
   DashboardIcon,
   NotebookIcon,
   TargetIcon,
+  UsersIcon,
 } from '../icons'
 
-const LINKS = [
+export interface NavItem {
+  to: string
+  label: string
+  icon: ComponentType<SVGProps<SVGSVGElement>>
+  end?: boolean
+}
+
+export const TEACHER_LINKS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: DashboardIcon, end: true },
   { to: '/attendance', label: 'Attendance', icon: CheckIcon },
   { to: '/kras', label: 'KRAs', icon: TargetIcon },
@@ -17,14 +27,23 @@ const LINKS = [
   { to: '/calendar', label: 'Calendar', icon: CalendarIcon },
 ]
 
+export const ADMIN_LINKS: NavItem[] = [
+  { to: '/admin', label: 'Overview', icon: DashboardIcon, end: true },
+  { to: '/admin/staff', label: 'Staff', icon: UsersIcon },
+  { to: '/admin/attendance', label: 'Attendance', icon: CheckIcon },
+  { to: '/admin/reports', label: 'Reports', icon: ChartBarIcon },
+  { to: '/admin/calendar', label: 'Calendar', icon: CalendarIcon },
+]
+
 interface SidebarProps {
+  links?: NavItem[]
   onNavigate?: () => void
 }
 
-export function Sidebar({ onNavigate }: SidebarProps) {
+export function Sidebar({ links = TEACHER_LINKS, onNavigate }: SidebarProps) {
   return (
     <nav aria-label="Main navigation" className="space-y-1.5">
-      {LINKS.map(({ to, label, icon: Icon, end }) => (
+      {links.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}

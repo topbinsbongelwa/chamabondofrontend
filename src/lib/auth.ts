@@ -8,6 +8,11 @@ export interface StoredUser {
   email?: string
   department?: string
   role?: string
+  userRole?: string
+  position?: string
+  title?: string
+  isAdmin?: boolean
+  approved?: boolean
 }
 
 const TOKEN_KEYS = ['chamabondo_token', 'token', 'accessToken', 'access_token', 'jwt']
@@ -79,6 +84,15 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null
 }
 
+function asBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    if (value.toLowerCase() === 'true') return true
+    if (value.toLowerCase() === 'false') return false
+  }
+  return undefined
+}
+
 function decodeJwt(token: string): Record<string, unknown> | null {
   const part = token.split('.')[1]
   if (!part) return null
@@ -122,6 +136,14 @@ function getUserFromToken(): StoredUser | null {
     email: asString(source.email),
     department: asString(source.department),
     role: asString(source.role),
+    userRole: asString(source.userRole) ?? asString(source.user_role),
+    position: asString(source.position),
+    title: asString(source.title),
+    isAdmin: asBoolean(source.isAdmin) ?? asBoolean(source.is_admin),
+    approved:
+      asBoolean(source.approved) ??
+      asBoolean(source.isApproved) ??
+      asBoolean(source.is_approved),
   }
 }
 

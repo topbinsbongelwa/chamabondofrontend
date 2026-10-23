@@ -6,6 +6,7 @@ import {
   type AttendanceSummary,
 } from './attendance'
 import { getToken, logout, setToken, setUser, type StoredUser } from './auth'
+import { normalizeStaffList, type StaffMember } from './staff'
 import { normalizeEcNumber, normalizePhone, type SignupValues } from './validation'
 
 const CONFIGURED_API_URL = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '')
@@ -38,6 +39,15 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    if (value.toLowerCase() === 'true') return true
+    if (value.toLowerCase() === 'false') return false
+  }
+  return undefined
 }
 
 function errorMessage(body: unknown): string | undefined {
@@ -125,6 +135,7 @@ function extractToken(body: unknown): string | null {
     asString(data.token) ??
     asString(data.accessToken) ??
     asString(data.access_token) ??
+    asString(data.authToken) ??
     asString(data.jwt) ??
     asString(root.token) ??
     null
@@ -133,7 +144,13 @@ function extractToken(body: unknown): string | null {
 
 function extractUser(body: unknown): StoredUser | null {
   const { root, data } = authPayload(body)
-  const candidate = asRecord(data.user) ?? asRecord(root.user) ?? data
+  const candidate =
+    asRecord(data.user) ??
+    asRecord(data.teacher) ??
+    asRecord(data.profile) ??
+    asRecord(root.user) ??
+    asRecord(root.teacher) ??
+    data
 
   if (!candidate || Object.keys(candidate).length === 0) return null
 
@@ -151,6 +168,14 @@ function extractUser(body: unknown): StoredUser | null {
     email: asString(candidate.email),
     department: asString(candidate.department),
     role: asString(candidate.role),
+    userRole: asString(candidate.userRole) ?? asString(candidate.user_role),
+    position: asString(candidate.position),
+    title: asString(candidate.title),
+    isAdmin: asBoolean(candidate.isAdmin) ?? asBoolean(candidate.is_admin),
+    approved:
+      asBoolean(candidate.approved) ??
+      asBoolean(candidate.isApproved) ??
+      asBoolean(candidate.is_approved),
   }
 }
 
@@ -198,6 +223,8 @@ export interface SignupPayload {
 export interface SignupResult {
   message?: string
   mocked?: boolean
+  token?: string
+  user?: StoredUser | null
 }
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -218,7 +245,7 @@ function toPayload(values: SignupValues): SignupPayload {
 export async function signup(values: SignupValues): Promise<SignupResult> {
   const payload = toPayload(values)
 
-  if (!isApiConfigured) {
+  if (import.meta.env.MODE === 'test') {
     await delay(900)
     return { mocked: true }
   }
@@ -232,8 +259,9 @@ export async function signup(values: SignupValues): Promise<SignupResult> {
       body: JSON.stringify(payload),
     })
   } catch {
-    await delay(900)
-    return { mocked: true }
+    throw new ApiError(
+      'Could not reach the server. Check your connection and try again.',
+    )
   }
 
   if (!response.ok) {
@@ -247,9 +275,18 @@ export async function signup(values: SignupValues): Promise<SignupResult> {
 
   const body: unknown = await response.json().catch(() => ({}))
   const record = asRecord(body)
+  const token = extractToken(body)
+  const user = token ? extractUser(body) : null
+
+  if (token) {
+    setToken(token)
+    setUser(user)
+  }
 
   return {
     message: asString(record?.message),
+    token: token ?? undefined,
+    user,
   }
 }
 
@@ -301,4 +338,19 @@ export async function fetchAttendanceSummary(): Promise<AttendanceSummary> {
 export async function fetchMyAttendance(): Promise<AttendanceRecord[]> {
   const payload = await request<unknown>('/attendance/me')
   return normalizeRecords(payload)
+}
+
+export async function fetchStaffDirectory(): Promise<StaffMember[]> {
+  try {
+    const payload = await request<unknown>('/staff')
+    return normalizeStaffList(payload)
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      throw new ApiError(
+        'The staff directory is not available yet. The backend needs a GET /staff endpoint.',
+        404,
+      )
+    }
+    throw error
+  }
 }
