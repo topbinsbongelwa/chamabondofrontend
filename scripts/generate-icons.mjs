@@ -14,7 +14,6 @@ async function render(size, filename, background) {
       fit: 'contain',
       background: background ?? { r: 255, g: 255, b: 255, alpha: 0 },
     })
-    .flatten({ background: '#FFFFFF' })
     .png()
     .toFile(path.join(outDir, filename))
 }
