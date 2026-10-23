@@ -1,6 +1,9 @@
+import { Navigate, useNavigate } from 'react-router-dom'
 import { Crest } from '../components/Crest'
 import { SignupForm } from '../components/SignupForm'
 import { BookIcon, CalendarIcon, WifiOffIcon } from '../components/icons'
+import { getToken } from '../lib/auth'
+import { getHomePath } from '../lib/roles'
 
 const FEATURES = [
   {
@@ -21,6 +24,12 @@ const FEATURES = [
 ]
 
 export function SignupPage() {
+  const navigate = useNavigate()
+
+  if (getToken()) {
+    return <Navigate to={getHomePath()} replace />
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <header className="border-b border-slate-100">
@@ -85,7 +94,9 @@ export function SignupPage() {
 
               <div className="my-6 h-px w-full bg-gold/30" />
 
-              <SignupForm />
+              <SignupForm
+                onSuccess={() => navigate(getHomePath(), { replace: true })}
+              />
 
               <div className="my-6 h-px w-full bg-slate-100" />
 

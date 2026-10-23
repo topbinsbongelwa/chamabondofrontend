@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { MonthlySummary } from '../components/dashboard/MonthlySummary'
 import { RecentAttendanceTable } from '../components/dashboard/RecentAttendanceTable'
+import { TeacherProfileCard } from '../components/dashboard/TeacherProfileCard'
 import { TodayAttendanceCard } from '../components/dashboard/TodayAttendanceCard'
+import { useAttendanceSummary } from '../hooks/useAttendanceSummary'
 import { getDisplayName } from '../lib/auth'
 
 function greeting(): string {
@@ -13,6 +15,7 @@ function greeting(): string {
 
 export function DashboardPage() {
   const [refreshToken, setRefreshToken] = useState(0)
+  const { summary, loading, error, reload } = useAttendanceSummary(refreshToken)
   const firstName = getDisplayName().split(/\s+/)[0]
 
   return (
@@ -33,11 +36,18 @@ export function DashboardPage() {
         <div className="hidden h-px w-24 bg-gold/50 sm:block" />
       </div>
 
+      <TeacherProfileCard summary={summary} loading={loading} error={error} />
+
       <TodayAttendanceCard
         onChanged={() => setRefreshToken((token) => token + 1)}
       />
 
-      <MonthlySummary refreshToken={refreshToken} />
+      <MonthlySummary
+        summary={summary}
+        loading={loading}
+        error={error}
+        onRetry={reload}
+      />
 
       <RecentAttendanceTable refreshToken={refreshToken} />
     </div>

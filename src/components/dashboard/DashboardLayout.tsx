@@ -1,16 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { getDisplayName, getInitials, logout } from '../../lib/auth'
+import { getRoleLabel } from '../../lib/roles'
 import { Crest } from '../Crest'
 import { CloseIcon, LogoutIcon, MenuIcon } from '../icons'
-import { Sidebar } from './Sidebar'
+import { ADMIN_LINKS, Sidebar, TEACHER_LINKS } from './Sidebar'
 
-export function DashboardLayout() {
+interface DashboardLayoutProps {
+  variant?: 'teacher' | 'admin'
+}
+
+export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const location = useLocation()
   const teacherName = getDisplayName()
   const initials = getInitials(teacherName)
+  const roleLabel = getRoleLabel()
+  const isAdminView = variant === 'admin'
+  const homePath = isAdminView ? '/admin' : '/'
+  const portalLabel = isAdminView ? 'Admin Portal' : 'Teacher Portal'
+  const navLinks = isAdminView ? ADMIN_LINKS : TEACHER_LINKS
 
   useEffect(() => {
     setMenuOpen(false)
@@ -51,14 +61,14 @@ export function DashboardLayout() {
             <MenuIcon className="h-5 w-5" />
           </button>
 
-          <Link to="/" className="flex min-w-0 items-center gap-2.5">
+          <Link to={homePath} className="flex min-w-0 items-center gap-2.5">
             <Crest className="h-9 w-9" />
             <div className="min-w-0">
               <p className="truncate text-sm font-bold leading-tight text-slate-900 sm:text-base">
                 Chamabondo
               </p>
               <p className="hidden truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 sm:block">
-                Teacher Portal
+                {portalLabel}
               </p>
             </div>
           </Link>
@@ -69,7 +79,7 @@ export function DashboardLayout() {
                 {teacherName}
               </p>
               <p className="hidden text-[10px] font-medium uppercase tracking-wide text-slate-400 sm:block">
-                Signed in
+                {roleLabel}
               </p>
             </div>
 
@@ -96,14 +106,15 @@ export function DashboardLayout() {
       <div className="mx-auto flex max-w-[1440px]">
         <aside className="hidden w-64 shrink-0 lg:block">
           <div className="sticky top-[68px] h-[calc(100vh-68px)] overflow-y-auto border-r border-slate-200 bg-white px-3 py-6">
-            <Sidebar />
+            <Sidebar links={navLinks} />
             <div className="mt-8 rounded-xl border border-gold/30 bg-gold/5 p-3.5">
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">
-                Chamabondo Primary
+                {isAdminView ? 'Staff oversight' : 'Chamabondo Primary'}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                Staff portal for attendance, KRAs, scheme books and school
-                activities.
+                {isAdminView
+                  ? 'Review staff profiles, attendance and monthly records.'
+                  : 'Staff portal for attendance, KRAs, scheme books and school activities.'}
               </p>
             </div>
           </div>
@@ -131,17 +142,21 @@ export function DashboardLayout() {
             className="animate-fade-in absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-2xl"
           >
             <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-4">
-              <div className="flex min-w-0 items-center gap-2.5">
+              <Link
+                to={homePath}
+                onClick={() => setMenuOpen(false)}
+                className="flex min-w-0 items-center gap-2.5"
+              >
                 <Crest className="h-8 w-8" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-slate-900">
                     Chamabondo
                   </p>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Teacher Portal
+                    {portalLabel}
                   </p>
                 </div>
-              </div>
+              </Link>
 
               <button
                 ref={closeButtonRef}
@@ -163,13 +178,16 @@ export function DashboardLayout() {
                   <p className="truncate text-sm font-semibold text-slate-900">
                     {teacherName}
                   </p>
-                  <p className="text-xs text-slate-500">Teacher</p>
+                  <p className="text-xs text-slate-500">{roleLabel}</p>
                 </div>
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-3">
-              <Sidebar onNavigate={() => setMenuOpen(false)} />
+              <Sidebar
+                links={navLinks}
+                onNavigate={() => setMenuOpen(false)}
+              />
             </div>
 
             <div className="border-t border-slate-100 p-4">

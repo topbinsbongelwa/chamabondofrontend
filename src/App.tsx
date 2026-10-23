@@ -1,13 +1,17 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AdminRoute } from './components/AdminRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
 import {
   BookIcon,
   CalendarIcon,
+  ChartBarIcon,
   CheckIcon,
   NotebookIcon,
   TargetIcon,
 } from './components/icons'
+import { AdminDashboardPage } from './pages/AdminDashboardPage'
+import { AdminStaffPage } from './pages/AdminStaffPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -69,6 +73,43 @@ export default function App() {
                 <PlaceholderPage
                   title="Calendar"
                   description="School meetings, deadlines and activities will appear here. This page is coming soon."
+                  icon={CalendarIcon}
+                />
+              }
+            />
+          </Route>
+        </Route>
+
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<DashboardLayout variant="admin" />}>
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="staff" element={<AdminStaffPage />} />
+            <Route
+              path="attendance"
+              element={
+                <PlaceholderPage
+                  title="School attendance"
+                  description="School-wide attendance records, filters and staff reports will live here."
+                  icon={CheckIcon}
+                />
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <PlaceholderPage
+                  title="Reports"
+                  description="Attendance reports and staff summaries will be available here."
+                  icon={ChartBarIcon}
+                />
+              }
+            />
+            <Route
+              path="calendar"
+              element={
+                <PlaceholderPage
+                  title="School calendar"
+                  description="School meetings, deadlines and staff activities will appear here."
                   icon={CalendarIcon}
                 />
               }

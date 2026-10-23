@@ -1,7 +1,7 @@
 import { useState, type Ref } from 'react'
 import { useController, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { signup } from '../lib/api'
+import { login, signup } from '../lib/api'
 import {
   DEPARTMENTS,
   normalizeEcNumber,
@@ -164,7 +164,11 @@ function PasswordField({
   )
 }
 
-export function SignupForm() {
+interface SignupFormProps {
+  onSuccess?: () => void
+}
+
+export function SignupForm({ onSuccess }: SignupFormProps = {}) {
   const [created, setCreated] = useState(false)
   const [serverError, setServerError] = useState<string | undefined>(undefined)
 
@@ -195,7 +199,26 @@ export function SignupForm() {
   const onSubmit = handleSubmit(async (values) => {
     setServerError(undefined)
     try {
-      await signup(values)
+      const result = await signup(values)
+
+      if (result.token) {
+        onSuccess?.()
+        return
+      }
+
+      if (onSuccess && !result.mocked) {
+        try {
+          await login({
+            ecNumber: normalizeEcNumber(values.ecNumber),
+            password: values.password,
+          })
+          onSuccess()
+          return
+        } catch {
+          // Account may still be waiting for headmaster approval.
+        }
+      }
+
       setCreated(true)
     } catch (error) {
       setServerError(

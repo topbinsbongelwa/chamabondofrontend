@@ -184,3 +184,34 @@ export function ChevronRightIcon(props: IconProps) {
     </svg>
   )
 }
+
+export function UsersIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M16 20v-1.8a3.8 3.8 0 0 0-3.8-3.8H6.8A3.8 3.8 0 0 0 3 18.2V20" />
+      <circle cx="9.5" cy="8" r="3.5" />
+      <path d="M16.5 4.7a3.5 3.5 0 0 1 0 6.6" />
+      <path d="M21 20v-1.8a3.8 3.8 0 0 0-2.8-3.7" />
+    </svg>
+  )
+}
+
+export function ChartBarIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 20V10" />
+      <path d="M9 20V4" />
+      <path d="M14 20v-7" />
+      <path d="M19 20V7" />
+    </svg>
+  )
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4 4" />
+    </svg>
+  )
+}

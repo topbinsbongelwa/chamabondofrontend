@@ -1,5 +1,4 @@
-import { useEffect, useState, type ComponentType, type SVGProps } from 'react'
-import { fetchAttendanceSummary } from '../../lib/api'
+import type { ComponentType, SVGProps } from 'react'
 import type { AttendanceSummary } from '../../lib/attendance'
 import { formatMonthYear } from '../../lib/format'
 import {
@@ -58,54 +57,19 @@ const CARDS: SummaryCard[] = [
   },
 ]
 
-const EMPTY_SUMMARY: AttendanceSummary = {
-  present: 0,
-  late: 0,
-  sickLeave: 0,
-  leave: 0,
-  absent: 0,
-}
-
 interface MonthlySummaryProps {
-  refreshToken: number
+  summary: AttendanceSummary
+  loading: boolean
+  error: string | null
+  onRetry: () => void
 }
 
-export function MonthlySummary({ refreshToken }: MonthlySummaryProps) {
-  const [summary, setSummary] = useState<AttendanceSummary>(EMPTY_SUMMARY)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [retryVersion, setRetryVersion] = useState(0)
-
-  useEffect(() => {
-    let cancelled = false
-
-    const load = async () => {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const data = await fetchAttendanceSummary()
-        if (!cancelled) setSummary(data)
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : 'Could not load your summary.',
-          )
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    void load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [refreshToken, retryVersion])
-
+export function MonthlySummary({
+  summary,
+  loading,
+  error,
+  onRetry,
+}: MonthlySummaryProps) {
   return (
     <section
       aria-labelledby="monthly-summary-heading"
@@ -144,7 +108,7 @@ export function MonthlySummary({ refreshToken }: MonthlySummaryProps) {
           </p>
           <button
             type="button"
-            onClick={() => setRetryVersion((version) => version + 1)}
+            onClick={onRetry}
             className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
           >
             <RefreshIcon className="h-3.5 w-3.5" />
