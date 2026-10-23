@@ -190,7 +190,7 @@ export interface LoginResult {
 }
 
 export async function login(credentials: LoginCredentials): Promise<LoginResult> {
-  const payload = await request<unknown>('/auth/login', {
+  const payload = await request<unknown>('/api/auth/login', {
     method: 'POST',
     auth: false,
     body: {
@@ -253,7 +253,7 @@ export async function signup(values: SignupValues): Promise<SignupResult> {
   let response: Response
 
   try {
-    response = await fetch(`${API_URL}/auth/signup`, {
+    response = await fetch(`${API_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -292,7 +292,7 @@ export async function signup(values: SignupValues): Promise<SignupResult> {
 
 export async function fetchTodayAttendance(): Promise<AttendanceRecord | null> {
   try {
-    const payload = await request<unknown>('/attendance/today')
+    const payload = await request<unknown>('/api/attendance/today')
     return normalizeRecord(payload)
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null
@@ -301,15 +301,15 @@ export async function fetchTodayAttendance(): Promise<AttendanceRecord | null> {
 }
 
 export async function checkIn(): Promise<AttendanceRecord | null> {
-  const payload = await request<unknown>('/attendance/checkin', {
+  const payload = await request<unknown>('/api/attendance/check-in', {
     method: 'POST',
   })
   return normalizeRecord(payload)
 }
 
 export async function checkOut(): Promise<AttendanceRecord | null> {
-  const payload = await request<unknown>('/attendance/checkout', {
-    method: 'POST',
+  const payload = await request<unknown>('/api/attendance/check-out', {
+    method: 'PATCH',
   })
   return normalizeRecord(payload)
 }
@@ -320,7 +320,7 @@ export async function markAttendance(
 ): Promise<AttendanceRecord | null> {
   const trimmedNote = note?.trim()
 
-  const payload = await request<unknown>('/attendance/mark', {
+  const payload = await request<unknown>('/api/attendance/mark', {
     method: 'POST',
     body: {
       status,
@@ -331,23 +331,23 @@ export async function markAttendance(
 }
 
 export async function fetchAttendanceSummary(): Promise<AttendanceSummary> {
-  const payload = await request<unknown>('/attendance/summary')
+  const payload = await request<unknown>('/api/attendance/summary')
   return normalizeSummary(payload)
 }
 
 export async function fetchMyAttendance(): Promise<AttendanceRecord[]> {
-  const payload = await request<unknown>('/attendance/me')
+  const payload = await request<unknown>('/api/attendance/me')
   return normalizeRecords(payload)
 }
 
 export async function fetchStaffDirectory(): Promise<StaffMember[]> {
   try {
-    const payload = await request<unknown>('/staff')
+    const payload = await request<unknown>('/api/staff')
     return normalizeStaffList(payload)
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       throw new ApiError(
-        'The staff directory is not available yet. The backend needs a GET /staff endpoint.',
+        'The staff directory is not available yet. The backend needs a GET /api/staff endpoint.',
         404,
       )
     }

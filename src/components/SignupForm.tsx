@@ -243,7 +243,7 @@ export function SignupForm({ onSuccess }: SignupFormProps = {}) {
           You will be able to log in once your account has been approved.
         </p>
       </div>
-    )
+    ) 
   }
 
   return (
