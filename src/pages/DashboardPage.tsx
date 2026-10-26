@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { UpcomingCalendar } from '../components/calendar/UpcomingCalendar'
 import { MonthlySummary } from '../components/dashboard/MonthlySummary'
 import { RecentAttendanceTable } from '../components/dashboard/RecentAttendanceTable'
 import { SchoolUpdatesCard } from '../components/dashboard/SchoolUpdatesCard'
@@ -37,6 +38,8 @@ export function DashboardPage() {
       </div>
 
       <SchoolUpdatesCard limit={3} title="Recent updates" />
+
+      <UpcomingCalendar variant="card" />
 
       <TodayAttendanceCard
         onChanged={() => setRefreshToken((token) => token + 1)}

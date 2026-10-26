@@ -132,7 +132,7 @@ export function SchoolUpdatesCard({
         )}
         {!loading && !error && limit && items.length > limit ? (
           <Link
-            to="/updates"
+            to="/calendar?tab=updates"
             className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-primary transition hover:bg-primary-50"
           >
             View all {items.length} updates

@@ -196,6 +196,14 @@ export function ChevronRightIcon(props: IconProps) {
   )
 }
 
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M15 5l-7 7 7 7" />
+    </svg>
+  )
+}
+
 export function UsersIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>
@@ -292,6 +300,43 @@ export function TrashIcon(props: IconProps) {
       <path d="m6.5 7 .8 12a2 2 0 0 0 2 1.9h5.4a2 2 0 0 0 2-1.9l.8-12" />
       <path d="M10 11v6" />
       <path d="M14 11v6" />
+    </svg>
+  )
+}
+
+export function PinIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M9 3h6l-1 7 4 3v2H6v-2l4-3-1-7Z" />
+      <path d="M12 15v6" />
+    </svg>
+  )
+}
+
+export function MapPinIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+      <circle cx="12" cy="10" r="2.8" />
+    </svg>
+  )
+}
+
+export function SparklesIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.5l1.5 4.2L17.7 9l-4.2 1.5L12 14.7l-1.5-4.2L6.3 9l4.2-1.3L12 3.5Z" />
+      <path d="M18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" />
+      <path d="M5.5 15l.6 1.7 1.7.6-1.7.6L5.5 20l-.6-2.1-1.7-.6 1.7-.6.6-1.7Z" />
+    </svg>
+  )
+}
+
+export function SendIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M21 3 10.5 13.5" />
+      <path d="M21 3l-6.8 18-3.7-7.5L3 9.8 21 3Z" />
     </svg>
   )
 }

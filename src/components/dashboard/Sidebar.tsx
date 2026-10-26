@@ -8,6 +8,7 @@ import {
   DashboardIcon,
   MegaphoneIcon,
   NotebookIcon,
+  SparklesIcon,
   TargetIcon,
   UsersIcon,
 } from '../icons'
@@ -21,7 +22,7 @@ export interface NavItem {
 
 export const TEACHER_LINKS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: DashboardIcon, end: true },
-  { to: '/updates', label: 'Updates', icon: MegaphoneIcon },
+  { to: '/ai-assistant', label: 'AI Assistant', icon: SparklesIcon },
   { to: '/attendance', label: 'Attendance', icon: CheckIcon },
   { to: '/kras', label: 'KRAs', icon: TargetIcon },
   { to: '/scheme-books', label: 'Scheme Books', icon: BookIcon },
@@ -32,7 +33,7 @@ export const TEACHER_LINKS: NavItem[] = [
 export const ADMIN_LINKS: NavItem[] = [
   { to: '/admin', label: 'Overview', icon: DashboardIcon, end: true },
   { to: '/admin/staff', label: 'Staff', icon: UsersIcon },
-  { to: '/admin/announcements', label: 'School updates', icon: CalendarIcon },
+  { to: '/admin/announcements', label: 'School updates', icon: MegaphoneIcon },
   { to: '/admin/kras', label: 'KRAs', icon: TargetIcon },
   { to: '/admin/scheme-books', label: 'Scheme Books', icon: BookIcon },
   { to: '/admin/attendance', label: 'Attendance', icon: CheckIcon },

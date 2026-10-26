@@ -1,5 +1,6 @@
 import { StaffDirectory } from '../components/admin/StaffDirectory'
 import { StaffStats } from '../components/admin/StaffStats'
+import { UpcomingCalendar } from '../components/calendar/UpcomingCalendar'
 import { SchoolUpdatesCard } from '../components/dashboard/SchoolUpdatesCard'
 import { useStaffDirectory } from '../hooks/useStaffDirectory'
 import { getDisplayName } from '../lib/auth'
@@ -40,6 +41,8 @@ export function AdminDashboardPage() {
         limit={6}
         viewAllHref="/admin/staff"
       />
+
+      <UpcomingCalendar variant="card" />
 
       <SchoolUpdatesCard limit={3} />
     </div>

@@ -19,6 +19,12 @@ import {
   type AnnouncementInput,
 } from './announcements'
 import {
+  normalizeCalendarItem,
+  normalizeCalendarList,
+  type CalendarItem,
+  type CalendarItemInput,
+} from './calendar'
+import {
   normalizeKra,
   normalizeKraList,
   type Kra,
@@ -680,6 +686,136 @@ export async function deleteAnnouncement(id: string): Promise<void> {
   await request<void>(`/api/announcements/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   })
+}
+
+export interface CalendarItemsQuery {
+  from?: string
+  to?: string
+  type?: string
+  category?: string
+}
+
+function calendarPath(id: string | number, suffix = ''): string {
+  return `/api/calendar/${encodeURIComponent(String(id))}${suffix}`
+}
+
+function calendarPayload(input: CalendarItemInput): Record<string, unknown> {
+  return {
+    type: input.type,
+    title: input.title.trim(),
+    description: input.description.trim(),
+    startDate: input.startDate,
+    endDate: input.endDate || null,
+    allDay: input.allDay,
+    startTime: input.allDay ? null : input.startTime || null,
+    endTime: input.allDay ? null : input.endTime || null,
+    venue: input.venue.trim() || null,
+    category: input.category,
+    audience: input.audience,
+    department:
+      input.audience === 'department' ? input.department.trim() || null : null,
+    assignedTeacherIds: input.assignedTeacherIds,
+    priority: input.priority,
+    pinned: input.pinned,
+    expiresAt: input.expiresAt || null,
+  }
+}
+
+function calendarResultItem(payload: unknown): CalendarItem | null {
+  const record = asRecord(payload)
+  return (
+    normalizeCalendarItem(record?.item) ??
+    normalizeCalendarItem(record?.event) ??
+    normalizeCalendarItem(record?.calendarItem) ??
+    normalizeCalendarItem(payload)
+  )
+}
+
+export async function fetchCalendarItems(
+  query: CalendarItemsQuery = {},
+): Promise<CalendarItem[]> {
+  const payload = await request<unknown>(
+    `/api/calendar${queryString({
+      from: query.from,
+      to: query.to,
+      type: query.type,
+      category: query.category,
+    })}`,
+  )
+  return normalizeCalendarList(payload)
+}
+
+export async function fetchUpcomingCalendarItems(
+  limit = 5,
+): Promise<CalendarItem[]> {
+  const payload = await request<unknown>(
+    `/api/calendar/upcoming${queryString({
+      limit: String(Math.max(1, limit)),
+    })}`,
+  )
+  return normalizeCalendarList(payload)
+}
+
+export async function createCalendarItem(
+  input: CalendarItemInput,
+): Promise<CalendarItem> {
+  const payload = await request<unknown>('/api/calendar', {
+    method: 'POST',
+    body: calendarPayload(input),
+  })
+  const item = calendarResultItem(payload)
+
+  if (!item) {
+    throw new ApiError('The server returned an invalid calendar item.')
+  }
+
+  return item
+}
+
+export async function updateCalendarItem(
+  id: string,
+  input: CalendarItemInput,
+): Promise<CalendarItem> {
+  const payload = await request<unknown>(calendarPath(id), {
+    method: 'PATCH',
+    body: calendarPayload(input),
+  })
+  const item = calendarResultItem(payload)
+
+  if (!item) {
+    throw new ApiError('The server returned an invalid calendar item.')
+  }
+
+  return item
+}
+
+export async function deleteCalendarItem(id: string): Promise<void> {
+  await request<void>(calendarPath(id), { method: 'DELETE' })
+}
+
+export async function setCalendarItemPinned(
+  id: string,
+  pinned: boolean,
+): Promise<CalendarItem | null> {
+  try {
+    const payload = await request<unknown>(calendarPath(id, '/pin'), {
+      method: 'PATCH',
+      body: { pinned },
+    })
+    return calendarResultItem(payload)
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.status === 405)
+    ) {
+      const payload = await request<unknown>(calendarPath(id), {
+        method: 'PATCH',
+        body: { pinned },
+      })
+      return calendarResultItem(payload)
+    }
+    throw error
+  }
 }
 
 export async function deleteKra(id: string | number): Promise<void> {

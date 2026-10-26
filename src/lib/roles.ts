@@ -88,6 +88,18 @@ export function isReviewer(): boolean {
   return isReviewerRole(getRole())
 }
 
+export function isTeacherInCharge(role: UserRole = getRole()): boolean {
+  return role === 'teacher-in-charge'
+}
+
+export function canManageCalendarItems(role: UserRole = getRole()): boolean {
+  return ADMIN_ROLES.includes(role)
+}
+
+export function canPinCalendarItems(role: UserRole = getRole()): boolean {
+  return role === 'head' || role === 'deputy' || role === 'admin'
+}
+
 export function getRoleLabel(role: UserRole = getRole()): string {
   return ROLE_LABELS[role]
 }

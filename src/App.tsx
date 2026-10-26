@@ -2,11 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminRoute } from './components/AdminRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
-import {
-  CalendarIcon,
-  ChartBarIcon,
-  NotebookIcon,
-} from './components/icons'
+import { ChartBarIcon, NotebookIcon } from './components/icons'
 import { OfflineBanner } from './components/pwa/OfflineBanner'
 import { InstallAppButton } from './components/pwa/InstallAppButton'
 import { UpdatePrompt } from './components/pwa/UpdatePrompt'
@@ -14,13 +10,14 @@ import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
 import { AdminStaffPage } from './pages/AdminStaffPage'
 import { AccountPage } from './pages/AccountPage'
+import { AiAssistantPage } from './pages/AiAssistantPage'
 import { AttendancePage } from './pages/AttendancePage'
+import { CalendarPage } from './pages/CalendarPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { KrasPage } from './pages/KrasPage'
 import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { SchemeBooksPage } from './pages/SchemeBooksPage'
-import { TeacherUpdatesPage } from './pages/TeacherUpdatesPage'
 import { SignupPage } from './pages/SignupPage'
 
 export default function App() {
@@ -33,9 +30,13 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route index element={<DashboardPage />} />
-            <Route path="updates" element={<TeacherUpdatesPage />} />
+            <Route
+              path="updates"
+              element={<Navigate to="/calendar?tab=updates" replace />}
+            />
+            <Route path="ai-assistant" element={<AiAssistantPage />} />
             <Route path="account" element={<AccountPage />} />
-            <Route path="profile" element={<Navigate to="/updates" replace />} />
+            <Route path="profile" element={<Navigate to="/account" replace />} />
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="kras" element={<KrasPage />} />
             <Route path="scheme-books" element={<SchemeBooksPage />} />
@@ -49,16 +50,7 @@ export default function App() {
                 />
               }
             />
-            <Route
-              path="calendar"
-              element={
-                <PlaceholderPage
-                  title="Calendar"
-                  description="School meetings, deadlines and activities will appear here. This page is coming soon."
-                  icon={CalendarIcon}
-                />
-              }
-            />
+            <Route path="calendar" element={<CalendarPage />} />
           </Route>
         </Route>
 
@@ -83,16 +75,7 @@ export default function App() {
                 />
               }
             />
-            <Route
-              path="calendar"
-              element={
-                <PlaceholderPage
-                  title="School calendar"
-                  description="School meetings, deadlines and staff activities will appear here."
-                  icon={CalendarIcon}
-                />
-              }
-            />
+            <Route path="calendar" element={<CalendarPage />} />
           </Route>
         </Route>
 
