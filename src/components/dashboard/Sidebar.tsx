@@ -34,6 +34,7 @@ export const ADMIN_LINKS: NavItem[] = [
   { to: '/admin/staff', label: 'Staff', icon: UsersIcon },
   { to: '/admin/announcements', label: 'School updates', icon: CalendarIcon },
   { to: '/admin/kras', label: 'KRAs', icon: TargetIcon },
+  { to: '/admin/scheme-books', label: 'Scheme Books', icon: BookIcon },
   { to: '/admin/attendance', label: 'Attendance', icon: CheckIcon },
   { to: '/admin/reports', label: 'Reports', icon: ChartBarIcon },
   { to: '/admin/calendar', label: 'Calendar', icon: CalendarIcon },

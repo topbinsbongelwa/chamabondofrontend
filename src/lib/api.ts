@@ -18,6 +18,12 @@ import {
   type Kra,
   type KraInput,
 } from './kras'
+import {
+  normalizeSchemeBook,
+  normalizeSchemeBookList,
+  type SchemeBook,
+  type SchemeBookInput,
+} from './schemeBooks'
 import { normalizeStaffList, type StaffMember } from './staff'
 import { normalizeEcNumber, normalizePhone, type SignupValues } from './validation'
 
@@ -135,6 +141,88 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   } catch {
     return text as unknown as T
   }
+}
+
+interface UploadOptions {
+  method?: 'POST' | 'PATCH'
+  onProgress?: (percent: number) => void
+}
+
+function upload<T>(
+  path: string,
+  body: FormData,
+  options: UploadOptions = {},
+): Promise<T> {
+  const { method = 'POST', onProgress } = options
+
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open(method, `${API_URL}${path}`)
+    xhr.setRequestHeader('Accept', 'application/json')
+
+    const token = getToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || !onProgress) return
+      const percent = Math.round((event.loaded / event.total) * 100)
+      onProgress(Math.min(100, Math.max(0, percent)))
+    }
+
+    xhr.onload = () => {
+      if (xhr.status === 401) {
+        logout()
+        reject(
+          new ApiError('Your session has expired. Please log in again.', 401),
+        )
+        return
+      }
+
+      const text = xhr.responseText
+      let payload: unknown = undefined
+
+      if (text) {
+        try {
+          payload = JSON.parse(text) as unknown
+        } catch {
+          payload = text
+        }
+      }
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(
+          new ApiError(
+            errorMessage(payload) ?? `The upload failed (${xhr.status}).`,
+            xhr.status,
+          ),
+        )
+        return
+      }
+
+      onProgress?.(100)
+
+      if (xhr.status === 204 || !text) {
+        resolve(undefined as T)
+        return
+      }
+
+      resolve(payload as T)
+    }
+
+    xhr.onerror = () => {
+      reject(
+        new ApiError(
+          'Could not reach the server. Check your connection and try again.',
+        ),
+      )
+    }
+
+    xhr.onabort = () => {
+      reject(new ApiError('The upload was cancelled.'))
+    }
+
+    xhr.send(body)
+  })
 }
 
 function authPayload(body: unknown): {
@@ -565,4 +653,144 @@ export async function rejectKra(
   })
 
   return normalizeKra(payload)
+}
+
+function schemeBookPath(id: string | number, suffix = ''): string {
+  return `/api/scheme-books/${encodeURIComponent(String(id))}${suffix}`
+}
+
+function appendSchemeBookInput(body: FormData, input: SchemeBookInput): void {
+  body.append('title', input.title)
+  body.append('subject', input.subject)
+  body.append('grade', input.grade)
+  body.append('term', input.term)
+  body.append('year', input.year)
+  body.append('weekFrom', input.weekFrom)
+  body.append('weekTo', input.weekTo)
+  body.append('notes', input.notes)
+}
+
+export async function fetchSchemeBooks(): Promise<SchemeBook[]> {
+  const payload = await request<unknown>('/api/scheme-books')
+  return normalizeSchemeBookList(payload)
+}
+
+export async function fetchReviewSchemeBooks(): Promise<SchemeBook[]> {
+  const payload = await request<unknown>('/api/scheme-books/review')
+  return normalizeSchemeBookList(payload)
+}
+
+export async function createSchemeBook(
+  input: SchemeBookInput,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<SchemeBook | null> {
+  const body = new FormData()
+  appendSchemeBookInput(body, input)
+  body.append('status', 'pending')
+  body.append('document', file)
+
+  const payload = await upload<unknown>('/api/scheme-books', body, {
+    method: 'POST',
+    onProgress,
+  })
+
+  return normalizeSchemeBook(payload)
+}
+
+export async function resubmitSchemeBook(
+  id: string | number,
+  input: SchemeBookInput,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<SchemeBook | null> {
+  const body = new FormData()
+  appendSchemeBookInput(body, input)
+  body.append('status', 'pending')
+  body.append('document', file)
+
+  const payload = await upload<unknown>(schemeBookPath(id), body, {
+    method: 'PATCH',
+    onProgress,
+  })
+
+  return normalizeSchemeBook(payload)
+}
+
+export async function deleteSchemeBook(id: string | number): Promise<void> {
+  await request<void>(schemeBookPath(id), { method: 'DELETE' })
+}
+
+export async function fetchSchemeBookDocument(
+  id: string | number,
+): Promise<{ blob: Blob; filename: string; contentType: string | null }> {
+  const headers = new Headers()
+  const token = getToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  let response: Response
+  try {
+    response = await fetch(`${API_URL}${schemeBookPath(id, '/document')}`, {
+      headers,
+    })
+  } catch (error) {
+    if ((error as { name?: string }).name === 'AbortError') throw error
+    throw new ApiError(
+      'Could not reach the server. Check your connection and try again.',
+    )
+  }
+
+  if (response.status === 401) {
+    logout()
+    throw new ApiError('Your session has expired. Please log in again.', 401)
+  }
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null)
+    throw new ApiError(
+      errorMessage(errorBody) ?? `The request failed (${response.status}).`,
+      response.status,
+    )
+  }
+
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const filename =
+    disposition.match(/filename="([^"]+)"/i)?.[1] ?? 'scheme-book-file'
+
+  return {
+    blob: await response.blob(),
+    filename,
+    contentType: response.headers.get('Content-Type'),
+  }
+}
+
+export async function getSchemeBookDocumentUrl(
+  id: string | number,
+): Promise<string> {
+  const payload = await request<unknown>(schemeBookPath(id, '/document-link'))
+  const url = asString(asRecord(payload)?.url)
+  if (!url) throw new ApiError('The server did not return a file link.')
+  return new URL(url, API_URL).toString()
+}
+
+export async function approveSchemeBook(
+  id: string | number,
+): Promise<SchemeBook | null> {
+  const payload = await request<unknown>(schemeBookPath(id, '/approve'), {
+    method: 'PATCH',
+  })
+
+  return normalizeSchemeBook(payload)
+}
+
+export async function rejectSchemeBook(
+  id: string | number,
+  comment: string,
+): Promise<SchemeBook | null> {
+  const payload = await request<unknown>(schemeBookPath(id, '/reject'), {
+    method: 'PATCH',
+    body: { comment },
+  })
+
+  return normalizeSchemeBook(payload)
 }

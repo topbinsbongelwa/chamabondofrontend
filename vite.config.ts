@@ -78,6 +78,7 @@ export default defineConfig({
     port: 5173,
     host: true,
     strictPort: true,
+    open: true,
   },
   build: {
     target: 'es2019',

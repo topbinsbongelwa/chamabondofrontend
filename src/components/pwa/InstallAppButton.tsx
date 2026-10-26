@@ -29,13 +29,6 @@ function isIosDevice(): boolean {
   return navigator.maxTouchPoints > 1 && /macintosh/i.test(ua)
 }
 
-function isSafari(): boolean {
-  if (typeof navigator === 'undefined') return false
-
-  const ua = navigator.userAgent
-  return /^((?!chrome|android|crios|fxios|edgios|opios).)*safari/i.test(ua)
-}
-
 const listeners = new Set<() => void>()
 let state: InstallState = {
   event: null,
@@ -75,9 +68,10 @@ if (typeof window !== 'undefined') {
 export function InstallAppButton() {
   const installState = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
   const [hintOpen, setHintOpen] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+  const [installError, setInstallError] = useState(false)
 
-  const iosInstallable =
-    !installState.installed && isIosDevice() && isSafari()
+  const iosInstallable = !installState.installed && isIosDevice()
   const canInstall =
     !installState.installed && (installState.event !== null || iosInstallable)
 
@@ -92,7 +86,7 @@ export function InstallAppButton() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [hintOpen])
 
-  if (!canInstall) return null
+  if (!canInstall || dismissed) return null
 
   const handleClick = async () => {
     if (!installState.event) {
@@ -101,55 +95,83 @@ export function InstallAppButton() {
     }
 
     const promptEvent = installState.event
-    await promptEvent.prompt()
-    const choice = await promptEvent.userChoice
+    try {
+      await promptEvent.prompt()
+      const choice = await promptEvent.userChoice
 
-    updateState({
-      event: null,
-      installed: installState.installed || choice.outcome === 'accepted',
-    })
-    setHintOpen(false)
+      updateState({
+        event: null,
+        installed: installState.installed || choice.outcome === 'accepted',
+      })
+      setHintOpen(false)
+      setInstallError(false)
+    } catch {
+      updateState({ ...state, event: null })
+      setInstallError(true)
+    }
   }
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={handleClick}
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gold/40 bg-gold/10 px-2.5 text-sm font-semibold text-gold-700 transition hover:border-gold/60 hover:bg-gold/15"
-        aria-expanded={iosInstallable ? hintOpen : undefined}
-      >
-        {iosInstallable ? (
-          <ShareIcon className="h-5 w-5" />
-        ) : (
-          <DownloadIcon className="h-5 w-5" />
-        )}
-        <span className="hidden md:inline">Install app</span>
-        <span className="sr-only md:hidden">Install app</span>
-      </button>
+    <div className="fixed inset-x-3 bottom-3 z-[55] mx-auto max-w-md rounded-2xl border border-gold/30 bg-white p-4 shadow-2xl motion-safe:animate-fade-in sm:inset-x-auto sm:bottom-5 sm:right-5 sm:mx-0 sm:w-96">
+      <div className="flex items-start gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold-700">
+          {iosInstallable ? (
+            <ShareIcon className="h-5 w-5" />
+          ) : (
+            <DownloadIcon className="h-5 w-5" />
+          )}
+        </span>
 
-      {hintOpen ? (
-        <div
-          role="status"
-          className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3.5 text-left shadow-xl motion-safe:animate-fade-in"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-bold text-slate-900">Install on iPhone</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-slate-900">Install Chamabondo</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
+            {iosInstallable
+              ? 'Add the app to your Home Screen for quick access.'
+              : 'Add the app to your device for quick, full-screen access.'}
+          </p>
+
+          {installError ? (
+            <p role="alert" className="mt-2 text-xs font-medium text-red-600">
+              The install prompt could not be opened. Try again from your browser menu.
+            </p>
+          ) : null}
+
+          {hintOpen ? (
+            <p role="status" className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-slate-600">
+              <ShareIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              Tap Share, then Add to Home Screen.
+            </p>
+          ) : null}
+
+          <div className="mt-3 flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setHintOpen(false)}
-              aria-label="Close install hint"
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              onClick={handleClick}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-3.5 text-sm font-semibold text-white transition hover:bg-primary-600"
+              aria-expanded={iosInstallable ? hintOpen : undefined}
             >
-              <CloseIcon className="h-4 w-4" />
+              {iosInstallable ? <ShareIcon className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
+              {iosInstallable ? 'How to install' : 'Install app'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDismissed(true)}
+              className="inline-flex min-h-10 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            >
+              Not now
             </button>
           </div>
-          <p className="mt-1.5 flex items-start gap-1.5 text-xs leading-relaxed text-slate-600">
-            <ShareIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            Tap Share, then Add to Home Screen.
-          </p>
         </div>
-      ) : null}
+
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label="Dismiss install prompt"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+        >
+          <CloseIcon className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   )
 }

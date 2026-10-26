@@ -3,13 +3,13 @@ import { AdminRoute } from './components/AdminRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
 import {
-  BookIcon,
   CalendarIcon,
   ChartBarIcon,
   CheckIcon,
   NotebookIcon,
 } from './components/icons'
 import { OfflineBanner } from './components/pwa/OfflineBanner'
+import { InstallAppButton } from './components/pwa/InstallAppButton'
 import { UpdatePrompt } from './components/pwa/UpdatePrompt'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
@@ -19,6 +19,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { KrasPage } from './pages/KrasPage'
 import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { SchemeBooksPage } from './pages/SchemeBooksPage'
 import { TeacherUpdatesPage } from './pages/TeacherUpdatesPage'
 import { SignupPage } from './pages/SignupPage'
 
@@ -46,16 +47,7 @@ export default function App() {
               }
             />
             <Route path="kras" element={<KrasPage />} />
-            <Route
-              path="scheme-books"
-              element={
-                <PlaceholderPage
-                  title="Scheme Books"
-                  description="Prepare and submit your scheme books from your phone. This page is coming soon."
-                  icon={BookIcon}
-                />
-              }
-            />
+            <Route path="scheme-books" element={<SchemeBooksPage />} />
             <Route
               path="logbook"
               element={
@@ -85,6 +77,7 @@ export default function App() {
             <Route path="staff" element={<AdminStaffPage />} />
             <Route path="announcements" element={<AdminAnnouncementsPage />} />
             <Route path="kras" element={<KrasPage />} />
+            <Route path="scheme-books" element={<SchemeBooksPage />} />
             <Route
               path="attendance"
               element={
@@ -122,6 +115,7 @@ export default function App() {
       </Routes>
 
       <OfflineBanner />
+      <InstallAppButton />
       <UpdatePrompt />
     </BrowserRouter>
   )
