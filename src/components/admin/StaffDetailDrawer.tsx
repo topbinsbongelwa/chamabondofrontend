@@ -15,7 +15,7 @@ const SUMMARY_ITEMS: {
   { key: 'present', label: 'Present', valueClass: 'text-emerald-700' },
   { key: 'late', label: 'Late', valueClass: 'text-amber-700' },
   { key: 'sickLeave', label: 'Sick Leave', valueClass: 'text-blue-700' },
-  { key: 'leave', label: 'Leave', valueClass: 'text-blue-700' },
+  { key: 'leave', label: 'Leave', valueClass: 'text-purple-700' },
   { key: 'absent', label: 'Absent', valueClass: 'text-red-700' },
 ]
 
@@ -23,7 +23,8 @@ const AWAY_STATUSES: AttendanceStatusKey[] = [
   'sick-leave',
   'leave',
   'holiday',
-  'official-duty',
+  'school-duty',
+  'sports-duty',
   'absent',
 ]
 

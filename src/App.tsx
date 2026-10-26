@@ -5,7 +5,6 @@ import { DashboardLayout } from './components/dashboard/DashboardLayout'
 import {
   CalendarIcon,
   ChartBarIcon,
-  CheckIcon,
   NotebookIcon,
 } from './components/icons'
 import { OfflineBanner } from './components/pwa/OfflineBanner'
@@ -15,6 +14,7 @@ import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
 import { AdminStaffPage } from './pages/AdminStaffPage'
 import { AccountPage } from './pages/AccountPage'
+import { AttendancePage } from './pages/AttendancePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { KrasPage } from './pages/KrasPage'
 import { LoginPage } from './pages/LoginPage'
@@ -36,16 +36,7 @@ export default function App() {
             <Route path="updates" element={<TeacherUpdatesPage />} />
             <Route path="account" element={<AccountPage />} />
             <Route path="profile" element={<Navigate to="/updates" replace />} />
-            <Route
-              path="attendance"
-              element={
-                <PlaceholderPage
-                  title="Attendance"
-                  description="Your full attendance history, filters and monthly reports will live here."
-                  icon={CheckIcon}
-                />
-              }
-            />
+            <Route path="attendance" element={<AttendancePage />} />
             <Route path="kras" element={<KrasPage />} />
             <Route path="scheme-books" element={<SchemeBooksPage />} />
             <Route
@@ -80,13 +71,7 @@ export default function App() {
             <Route path="scheme-books" element={<SchemeBooksPage />} />
             <Route
               path="attendance"
-              element={
-                <PlaceholderPage
-                  title="School attendance"
-                  description="School-wide attendance records, filters and staff reports will live here."
-                  icon={CheckIcon}
-                />
-              }
+              element={<AttendancePage defaultTab="school" />}
             />
             <Route
               path="reports"

@@ -5,6 +5,12 @@ import {
   type AttendanceRecord,
   type AttendanceSummary,
 } from './attendance'
+import {
+  normalizeRangeStats,
+  normalizeSchoolStats,
+  type AttendanceRangeStats,
+  type SchoolAttendanceStats,
+} from './attendanceStats'
 import { getToken, logout, setToken, setUser, type StoredUser } from './auth'
 import {
   normalizeAnnouncement,
@@ -465,9 +471,66 @@ export async function fetchAttendanceSummary(): Promise<AttendanceSummary> {
   return normalizeSummary(payload)
 }
 
-export async function fetchMyAttendance(): Promise<AttendanceRecord[]> {
-  const payload = await request<unknown>('/api/attendance/me')
+export async function fetchMyAttendance(
+  month?: string,
+): Promise<AttendanceRecord[]> {
+  const query = month?.trim()
+    ? `?month=${encodeURIComponent(month.trim())}`
+    : ''
+  const payload = await request<unknown>(`/api/attendance/me${query}`)
   return normalizeRecords(payload)
+}
+
+function queryString(
+  values: Record<string, string | undefined>,
+): string {
+  const params = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(values)) {
+    const trimmed = value?.trim()
+    if (trimmed) params.set(key, trimmed)
+  }
+
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}
+
+export interface AttendanceStatsQuery {
+  from?: string
+  to?: string
+}
+
+export interface SchoolAttendanceStatsQuery extends AttendanceStatsQuery {
+  department?: string
+  teacherId?: string
+}
+
+export async function fetchAttendanceStats(
+  query: AttendanceStatsQuery = {},
+): Promise<AttendanceRangeStats> {
+  const payload = await request<unknown>(
+    `/api/attendance/stats${queryString({
+      from: query.from,
+      to: query.to,
+    })}`,
+  )
+
+  return normalizeRangeStats(payload, query)
+}
+
+export async function fetchSchoolAttendanceStats(
+  query: SchoolAttendanceStatsQuery = {},
+): Promise<SchoolAttendanceStats> {
+  const payload = await request<unknown>(
+    `/api/attendance/stats/school${queryString({
+      from: query.from,
+      to: query.to,
+      department: query.department,
+      teacherId: query.teacherId,
+    })}`,
+  )
+
+  return normalizeSchoolStats(payload, query)
 }
 
 export async function fetchStaffDirectory(): Promise<StaffMember[]> {

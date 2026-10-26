@@ -39,7 +39,14 @@ function messageFromError(error: unknown): string {
     : 'Something went wrong. Please try again.'
 }
 
-const LEAVE_STATUSES = ['sick-leave', 'leave', 'holiday', 'official-duty', 'absent']
+const LEAVE_STATUSES = [
+  'sick-leave',
+  'leave',
+  'holiday',
+  'school-duty',
+  'sports-duty',
+  'absent',
+]
 
 export function TodayAttendanceCard({ onChanged }: TodayAttendanceCardProps) {
   const now = useNow()

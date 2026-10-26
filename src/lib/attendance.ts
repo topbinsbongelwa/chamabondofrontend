@@ -1,3 +1,21 @@
+﻿import {
+  ATTENDANCE_STATUS_ALIASES,
+  STATUS_LABELS,
+  attendanceStatusKey,
+  type AttendanceStatusKey,
+} from '../constants/attendance'
+
+export {
+  ATTENDANCE_STATUSES,
+  ATTENDANCE_STATUS_META,
+  MARK_OPTIONS,
+  STATUS_LABELS,
+  STATUS_ORDER,
+  STATUS_SHORT_LABELS,
+  type AttendanceStatus,
+  type AttendanceStatusKey,
+} from '../constants/attendance'
+
 export interface AttendanceRecord {
   id: string | number | null
   date: string
@@ -15,56 +33,11 @@ export interface AttendanceSummary {
   absent: number
 }
 
-export const MARK_OPTIONS = [
-  { value: 'sick_leave', label: 'Sick Leave' },
-  { value: 'leave', label: 'Leave' },
-  { value: 'holiday', label: 'Holiday' },
-  { value: 'official_duty', label: 'Official Duty' },
-] as const
-
-export type AttendanceStatusKey =
-  | 'present'
-  | 'late'
-  | 'sick-leave'
-  | 'leave'
-  | 'holiday'
-  | 'official-duty'
-  | 'absent'
-  | 'unknown'
-
-export const STATUS_LABELS: Record<AttendanceStatusKey, string> = {
-  present: 'Present',
-  late: 'Late',
-  'sick-leave': 'Sick Leave',
-  leave: 'Leave',
-  holiday: 'Holiday',
-  'official-duty': 'Official Duty',
-  absent: 'Absent',
-  unknown: 'Not marked',
-}
-
-const STATUS_ALIASES: Record<string, AttendanceStatusKey> = {
-  present: 'present',
-  checkedin: 'present',
-  checked: 'present',
-  late: 'late',
-  absent: 'absent',
-  sick: 'sick-leave',
-  sickleave: 'sick-leave',
-  leave: 'leave',
-  annualleave: 'leave',
-  paidleave: 'leave',
-  holiday: 'holiday',
-  publicholiday: 'holiday',
-  officialduty: 'official-duty',
-  duty: 'official-duty',
-}
-
 export function statusKey(value?: string | null): AttendanceStatusKey {
   if (!value) return 'unknown'
 
   const key = value.trim().toLowerCase().replace(/[\s_-]+/g, '')
-  return STATUS_ALIASES[key] ?? 'unknown'
+  return ATTENDANCE_STATUS_ALIASES[key] ?? attendanceStatusKey(value)
 }
 
 export function statusLabel(value?: string | null): string {

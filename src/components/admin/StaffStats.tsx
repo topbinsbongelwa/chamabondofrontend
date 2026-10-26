@@ -3,7 +3,14 @@ import { statusKey } from '../../lib/attendance'
 import type { StaffMember } from '../../lib/staff'
 import { AlertIcon, CalendarIcon, CheckIcon, ClockIcon, UsersIcon } from '../icons'
 
-const AWAY_STATUSES = ['sick-leave', 'leave', 'holiday', 'official-duty', 'absent']
+const AWAY_STATUSES = [
+  'sick-leave',
+  'leave',
+  'holiday',
+  'school-duty',
+  'sports-duty',
+  'absent',
+]
 
 interface StaffStatsProps {
   staff: StaffMember[]

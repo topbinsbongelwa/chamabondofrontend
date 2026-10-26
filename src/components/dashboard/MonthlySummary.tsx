@@ -45,8 +45,8 @@ const CARDS: SummaryCard[] = [
     key: 'leave',
     label: 'Leave',
     icon: CalendarIcon,
-    iconClass: 'bg-blue-50 text-blue-600',
-    valueClass: 'text-blue-700',
+    iconClass: 'bg-purple-50 text-purple-600',
+    valueClass: 'text-purple-700',
   },
   {
     key: 'absent',

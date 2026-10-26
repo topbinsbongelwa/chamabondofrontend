@@ -21,7 +21,8 @@ const AWAY_STATUSES: AttendanceStatusKey[] = [
   'sick-leave',
   'leave',
   'holiday',
-  'official-duty',
+  'school-duty',
+  'sports-duty',
   'absent',
 ]
 
