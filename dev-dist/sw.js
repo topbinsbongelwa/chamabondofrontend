@@ -78,13 +78,18 @@ define(['./workbox-22023736'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "/index.html",
-    "revision": "0.lo35gp0pguk"
+    "revision": "0.kf6uhv2r014"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
     allowlist: [/^\/$/],
     denylist: [/^\/api\//]
   }));
+  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'POST');
+  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'PUT');
+  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'PATCH');
+  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'DELETE');
   workbox.registerRoute(/\/api\/auth\/.*/i, new workbox.NetworkOnly(), 'GET');
   workbox.registerRoute(/\/api\/.*/i, new workbox.NetworkFirst({
     "cacheName": "chamabondo-api",

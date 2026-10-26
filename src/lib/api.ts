@@ -155,6 +155,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 }
 
+export function api<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  return request<T>(path, options)
+}
+
 interface UploadOptions {
   method?: 'POST' | 'PATCH'
   onProgress?: (percent: number) => void
@@ -293,6 +300,9 @@ function extractUser(body: unknown): StoredUser | null {
     userRole: asString(candidate.userRole) ?? asString(candidate.user_role),
     position: asString(candidate.position),
     title: asString(candidate.title),
+    plan: asString(candidate.plan),
+    subscriptionPlan:
+      asString(candidate.subscriptionPlan) ?? asString(candidate.subscription_plan),
     isAdmin: asBoolean(candidate.isAdmin) ?? asBoolean(candidate.is_admin),
     approved:
       asBoolean(candidate.approved) ??

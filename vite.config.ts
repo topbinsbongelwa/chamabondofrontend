@@ -49,6 +49,15 @@ export default defineConfig({
         skipWaiting: true,
         runtimeCaching: [
           {
+            urlPattern: /\/api\/ai(?:\/|$)/i,
+            handler: 'NetworkOnly',
+          },
+          ...(['POST', 'PUT', 'PATCH', 'DELETE'] as const).map((method) => ({
+            urlPattern: /\/api\/ai(?:\/|$)/i,
+            method,
+            handler: 'NetworkOnly' as const,
+          })),
+          {
             urlPattern: /\/api\/auth\/.*/i,
             handler: 'NetworkOnly',
           },

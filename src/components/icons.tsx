@@ -340,3 +340,45 @@ export function SendIcon(props: IconProps) {
     </svg>
   )
 }
+
+export function CopyIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="8" y="8" width="12" height="12" rx="2" />
+      <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+    </svg>
+  )
+}
+
+export function MicIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="9" y="3" width="6" height="12" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8" />
+    </svg>
+  )
+}
+
+export function StopIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="5" y="5" width="14" height="14" rx="2" />
+    </svg>
+  )
+}
+
+export function ThumbsUpIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 10v10H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2h3Zm0 0 5-8a3 3 0 0 1 2 3v3h4a2 2 0 0 1 2 2l-1.5 8a2 2 0 0 1-2 2H7" />
+    </svg>
+  )
+}
+
+export function ThumbsDownIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 14V4H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h3Zm0 0 5 8a3 3 0 0 0 2-3v-3h4a2 2 0 0 0 2-2l-1.5-8a2 2 0 0 0-2-2H7" />
+    </svg>
+  )
+}

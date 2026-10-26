@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { getDisplayName, getInitials, logout } from '../../lib/auth'
 import { getRoleLabel } from '../../lib/roles'
+import { AiChatProvider } from '../../hooks/useChat'
+import { FloatingAssistant } from '../ai/FloatingAssistant'
 import { Crest } from '../Crest'
 import { CloseIcon, LogoutIcon, MenuIcon } from '../icons'
 import { ADMIN_LINKS, Sidebar, TEACHER_LINKS } from './Sidebar'
@@ -46,6 +48,7 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
   }, [menuOpen])
 
   return (
+    <AiChatProvider>
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="h-0.5 w-full bg-gradient-to-r from-primary via-gold to-primary" />
@@ -215,5 +218,7 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
         </div>
       ) : null}
     </div>
+    <FloatingAssistant />
+    </AiChatProvider>
   )
 }

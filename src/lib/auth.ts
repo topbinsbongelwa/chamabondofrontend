@@ -12,6 +12,8 @@ export interface StoredUser {
   userRole?: string
   position?: string
   title?: string
+  plan?: string
+  subscriptionPlan?: string
   isAdmin?: boolean
   approved?: boolean
 }
@@ -144,6 +146,8 @@ function getUserFromToken(): StoredUser | null {
     userRole: asString(source.userRole) ?? asString(source.user_role),
     position: asString(source.position),
     title: asString(source.title),
+    plan: asString(source.plan),
+    subscriptionPlan: asString(source.subscriptionPlan) ?? asString(source.subscription_plan),
     isAdmin: asBoolean(source.isAdmin) ?? asBoolean(source.is_admin),
     approved:
       asBoolean(source.approved) ??
