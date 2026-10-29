@@ -1,15 +1,18 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminRoute } from './components/AdminRoute'
+import { RoleRoute } from './components/RoleRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
-import { ChartBarIcon, NotebookIcon } from './components/icons'
+import { NotebookIcon } from './components/icons'
 import { OfflineBanner } from './components/pwa/OfflineBanner'
 import { InstallAppButton } from './components/pwa/InstallAppButton'
 import { UpdatePrompt } from './components/pwa/UpdatePrompt'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
+import { AdminAuditLogPage } from './pages/AdminAuditLogPage'
 import { AdminStaffPage } from './pages/AdminStaffPage'
+import { AdminReportsPage } from './pages/AdminReportsPage'
 import { AccountPage } from './pages/AccountPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { CalendarPage } from './pages/CalendarPage'
@@ -62,24 +65,19 @@ export default function App() {
           <Route path="/admin" element={<DashboardLayout variant="admin" />}>
             <Route index element={<AdminDashboardPage />} />
             <Route path="staff" element={<AdminStaffPage />} />
-            <Route path="announcements" element={<AdminAnnouncementsPage />} />
+            <Route path="communications" element={<AdminAnnouncementsPage />} />
+            <Route path="announcements" element={<Navigate to="/admin/communications" replace />} />
             <Route path="kras" element={<KrasPage />} />
             <Route path="scheme-books" element={<SchemeBooksPage />} />
             <Route
               path="attendance"
               element={<AttendancePage defaultTab="school" />}
             />
-            <Route
-              path="reports"
-              element={
-                <PlaceholderPage
-                  title="Reports"
-                  description="Attendance reports and staff summaries will be available here."
-                  icon={ChartBarIcon}
-                />
-              }
-            />
+            <Route path="reports" element={<AdminReportsPage />} />
             <Route path="calendar" element={<CalendarPage />} />
+            <Route element={<RoleRoute allowedRoles={['head']} />}>
+              <Route path="audit" element={<AdminAuditLogPage />} />
+            </Route>
           </Route>
         </Route>
 

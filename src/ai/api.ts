@@ -1,9 +1,10 @@
-import { api, ApiError, isApiConfigured } from '../lib/api'
+import { api, ApiError } from '../lib/api'
 import { getToken } from '../lib/auth'
-import { AI_MOCK_ENABLED } from './constants'
+import { AI_MOCK_ENABLED, AI_PROVIDER_MODEL } from './constants'
 import type { AiChat, AiMessage, AiPlugin, AiProject, AiSettings } from './types'
 
 const API_ROOT = '/api/ai'
+const AI_ASK_ENDPOINT = '/api/ai/ask'
 const storageKey = 'chamabondo_ai_chats'
 let mockChats: AiChat[] = []
 
@@ -33,12 +34,7 @@ function saveChats(chats: AiChat[]): void {
 }
 
 export async function fetchChats(): Promise<AiChat[]> {
-  if (AI_MOCK_ENABLED) return readChats()
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return readChats()
-  const payload = await api<AiChat[] | { chats?: AiChat[] }>(`${API_ROOT}/chats`)
-  const chats = Array.isArray(payload) ? payload : payload.chats ?? []
-  saveChats(chats)
-  return chats
+  return readChats()
 }
 
 export function getCachedChats(): AiChat[] {
@@ -46,12 +42,8 @@ export function getCachedChats(): AiChat[] {
 }
 
 export async function fetchModels(): Promise<string[]> {
-  if (AI_MOCK_ENABLED) return ['Auto', 'Intelli AI Edu', 'GPT-4o mini']
-  const payload = await api<string[] | { models?: Array<string | { name?: string; id?: string }> }>(`${API_ROOT}/models`)
-  if (Array.isArray(payload)) return payload
-  return (payload.models ?? []).map((model: string | { name?: string; id?: string }) =>
-    typeof model === 'string' ? model : model.name ?? model.id ?? 'Model',
-  )
+  if (AI_MOCK_ENABLED) return ['Auto', AI_PROVIDER_MODEL]
+  return [AI_PROVIDER_MODEL]
 }
 
 export async function fetchPlugins(): Promise<AiPlugin[]> {
@@ -155,17 +147,34 @@ export async function streamAiReply(
     }
     return { chatId: request.chatId }
   }
-  if (!isApiConfigured) throw new ApiError('The AI service is not configured.')
-
-  const baseUrl = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '')
-  const response = await fetch(`${baseUrl}${API_ROOT}/chat/stream`, {
+  onEvent({ type: 'status', text: 'Consulting Intelli AI...' })
+  const history = request.history.slice()
+  if (history.at(-1)?.role === 'user' && history.at(-1)?.content === request.message) {
+    history.pop()
+  }
+  const context = [
+    request.context,
+    request.settings.subject && `Subject: ${request.settings.subject}`,
+    request.settings.grade && `Grade: ${request.settings.grade}`,
+    request.settings.language && `Language: ${request.settings.language}`,
+    request.settings.tone && `Tone: ${request.settings.tone}`,
+    request.settings.instructions,
+  ].filter(Boolean).join('\n')
+  const response = await fetch(AI_ASK_ENDPOINT, {
     method: 'POST',
     headers: {
-      Accept: 'text/event-stream',
+      Accept: 'application/json',
       'Content-Type': 'application/json',
       ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify({
+      question: request.message,
+      context,
+      history: history.map((message) => ({
+        role: message.role,
+        text: message.content,
+      })),
+    }),
     signal,
   })
   if (!response.ok) {
@@ -177,6 +186,20 @@ export async function streamAiReply(
       // The HTTP status remains an actionable error when the body is not JSON.
     }
     throw new ApiError(message, response.status)
+  }
+  if (response.headers.get('content-type')?.includes('application/json')) {
+    let payload: { answer?: unknown; error?: unknown }
+    try {
+      payload = await response.json() as { answer?: unknown; error?: unknown }
+    } catch {
+      throw new ApiError('Intelli AI returned an invalid response.')
+    }
+    if (typeof payload.answer !== 'string' || !payload.answer.trim()) {
+      const message = typeof payload.error === 'string' ? payload.error : 'Intelli AI returned no answer.'
+      throw new ApiError(message)
+    }
+    onEvent({ type: 'token', text: payload.answer })
+    return { chatId: request.chatId }
   }
   if (!response.body) throw new ApiError('The AI service returned an empty stream.')
 

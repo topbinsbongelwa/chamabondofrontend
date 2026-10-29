@@ -88,6 +88,13 @@ export default defineConfig({
     host: true,
     strictPort: true,
     open: true,
+    proxy: {
+      '/api/ai/ask': {
+        target: 'https://intellli-ai.netlify.app',
+        changeOrigin: true,
+        rewrite: () => '/api/ask',
+      },
+    },
   },
   build: {
     target: 'es2019',

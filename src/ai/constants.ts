@@ -11,3 +11,4 @@ export const AI_UPLOAD_ACCEPT =
   '.pdf,.doc,.docx,image/*'
 
 export const AI_MOCK_ENABLED = import.meta.env.VITE_AI_MOCK === 'true'
+export const AI_PROVIDER_MODEL = 'Intelli AI (automatic provider blend)'

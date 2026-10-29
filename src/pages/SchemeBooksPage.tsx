@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { MySchemeBooksTab } from '../components/schemeBooks/MySchemeBooksTab'
 import { ReviewSchemeBooksTab } from '../components/schemeBooks/ReviewSchemeBooksTab'
 import {
@@ -7,7 +8,7 @@ import {
   CheckIcon,
   CloseIcon,
 } from '../components/icons'
-import { getRole, isReviewerRole } from '../lib/roles'
+import { getDepartmentScope, getRole, getRoleLabel, isReviewerRole } from '../lib/roles'
 
 type Tab = 'mine' | 'review'
 type NoticeTone = 'success' | 'error'
@@ -19,7 +20,11 @@ interface Notice {
 
 export function SchemeBooksPage() {
   const canReview = isReviewerRole(getRole())
-  const [tab, setTab] = useState<Tab>('mine')
+  const departmentScope = getDepartmentScope()
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(() =>
+    searchParams.get('tab') === 'review' && canReview ? 'review' : 'mine',
+  )
   const [notice, setNotice] = useState<Notice | null>(null)
 
   useEffect(() => {
@@ -53,7 +58,18 @@ export function SchemeBooksPage() {
           </p>
         </div>
 
-        <div className="hidden h-px w-24 bg-gold/50 sm:block" />
+        {canReview ? (
+          <span
+            title={departmentScope === null ? 'Whole-school review scope.' : `Review scope is limited to ${departmentScope || 'an unassigned department'}.`}
+            className="inline-flex items-center rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gold-700"
+          >
+            {departmentScope === null
+              ? getRoleLabel()
+              : departmentScope
+                ? `${departmentScope} department`
+                : 'Department not assigned'}
+          </span>
+        ) : <div className="hidden h-px w-24 bg-gold/50 sm:block" />}
       </div>
 
       {canReview ? (

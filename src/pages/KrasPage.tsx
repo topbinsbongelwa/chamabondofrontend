@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { MyKrasTab } from '../components/kras/MyKrasTab'
 import { ReviewKrasTab } from '../components/kras/ReviewKrasTab'
 import {
@@ -7,7 +8,7 @@ import {
   CloseIcon,
   TargetIcon,
 } from '../components/icons'
-import { getRole } from '../lib/roles'
+import { getDepartmentScope, getRole, getRoleLabel, isReviewerRole } from '../lib/roles'
 
 type Tab = 'mine' | 'review'
 type NoticeTone = 'success' | 'error'
@@ -18,8 +19,12 @@ interface Notice {
 }
 
 export function KrasPage() {
-  const canReview = getRole() === 'head'
-  const [tab, setTab] = useState<Tab>('mine')
+  const canReview = isReviewerRole(getRole())
+  const departmentScope = getDepartmentScope()
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(() =>
+    searchParams.get('tab') === 'review' && canReview ? 'review' : 'mine',
+  )
   const [notice, setNotice] = useState<Notice | null>(null)
 
   useEffect(() => {
@@ -53,7 +58,18 @@ export function KrasPage() {
           </p>
         </div>
 
-        <div className="hidden h-px w-24 bg-gold/50 sm:block" />
+        {canReview ? (
+          <span
+            title={departmentScope === null ? 'Whole-school review scope.' : `Review scope is limited to ${departmentScope || 'an unassigned department'}.`}
+            className="inline-flex items-center rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gold-700"
+          >
+            {departmentScope === null
+              ? getRoleLabel()
+              : departmentScope
+                ? `${departmentScope} department`
+                : 'Department not assigned'}
+          </span>
+        ) : <div className="hidden h-px w-24 bg-gold/50 sm:block" />}
       </div>
 
       {canReview ? (

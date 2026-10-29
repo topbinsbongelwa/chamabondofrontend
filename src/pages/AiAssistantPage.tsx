@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { startCheckout, createShareLink, fetchModels, readProjects, newProjectId, persistProjects, stopSharing } from '../ai/api'
-import { AI_TONES } from '../ai/constants'
+import { AI_MOCK_ENABLED, AI_PROVIDER_MODEL, AI_TONES } from '../ai/constants'
 import type { AiProject } from '../ai/types'
 import { ChatPanel } from '../components/ai/ChatPanel'
 import { useChat } from '../hooks/useChat'
@@ -256,10 +256,12 @@ export function AiAssistantPage() {
           <button type="button" aria-label="Open chat history" onClick={() => setDrawerOpen(true)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden"><MenuIcon className="h-5 w-5" /></button>
           {schemeOpen ? <h1 className="min-w-0 flex-1 truncate text-sm font-bold text-slate-900">Scheme Generator</h1> : <button type="button" title="Click to rename chat" onClick={() => chat.activeChat && onRenameChat(chat.activeChat.id, chat.activeChat.title)} className="min-w-0 flex-1 truncate text-left text-sm font-bold text-slate-900 hover:text-primary">{activeChatTitle}<PencilIcon className="ml-1 inline h-3 w-3 text-slate-400" /></button>}
           {!schemeOpen ? <>
-            <label className="sr-only" htmlFor="ai-model">AI model</label>
-            <select id="ai-model" value={chat.model} onChange={(event) => chat.setModel(event.target.value)} className="max-w-[135px] rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 sm:max-w-[180px]">
-              {[...new Set([...models, chat.model])].map((model) => <option key={model} value={model}>{model}</option>)}
-            </select>
+            {AI_MOCK_ENABLED ? <>
+              <label className="sr-only" htmlFor="ai-model">AI model</label>
+              <select id="ai-model" value={chat.model} onChange={(event) => chat.setModel(event.target.value)} className="max-w-[135px] rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 sm:max-w-[180px]">
+                {[...new Set([...models, chat.model])].map((model) => <option key={model} value={model}>{model}</option>)}
+              </select>
+            </> : <span className="max-w-[170px] truncate rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-600">{AI_PROVIDER_MODEL}</span>}
             <button type="button" aria-label="Share chat" disabled={!chat.activeChat?.messages.length} onClick={() => { setShareError(''); setShareCopied(false); setShareOpen(true) }} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 sm:w-auto sm:px-3"><ShareIcon className="h-4 w-4" /><span className="ml-1 hidden text-xs font-semibold sm:inline">Share</span></button>
           </> : <button type="button" onClick={() => setSchemeOpen(false)} className="rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-slate-100">Back to chat</button>}
         </header>

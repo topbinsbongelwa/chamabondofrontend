@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { getDisplayName, getInitials, logout } from '../../lib/auth'
-import { getRoleLabel } from '../../lib/roles'
+import { getRole, getRoleLabel } from '../../lib/roles'
 import { AiChatProvider } from '../../hooks/useChat'
 import { FloatingAssistant } from '../ai/FloatingAssistant'
 import { Crest } from '../Crest'
 import { CloseIcon, LogoutIcon, MenuIcon } from '../icons'
-import { ADMIN_LINKS, Sidebar, TEACHER_LINKS } from './Sidebar'
+import { adminLinksForRole, Sidebar, TEACHER_LINKS } from './Sidebar'
 
 interface DashboardLayoutProps {
   variant?: 'teacher' | 'admin'
@@ -22,7 +22,7 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
   const isAdminView = variant === 'admin'
   const homePath = isAdminView ? '/admin' : '/'
   const portalLabel = isAdminView ? 'Admin Portal' : 'Teacher Portal'
-  const navLinks = isAdminView ? ADMIN_LINKS : TEACHER_LINKS
+  const navLinks = isAdminView ? adminLinksForRole(getRole()) : TEACHER_LINKS
 
   useEffect(() => {
     setMenuOpen(false)

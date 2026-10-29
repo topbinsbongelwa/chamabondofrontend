@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { getToken } from '../lib/auth'
 import { getRole, isAdminRole } from '../lib/roles'
+import { NotAllowedPage } from './NotAllowedPage'
 
 export function AdminRoute() {
   const location = useLocation()
@@ -16,7 +17,7 @@ export function AdminRoute() {
   }
 
   if (!isAdminRole(getRole())) {
-    return <Navigate to="/" replace />
+    return <NotAllowedPage description="The administration dashboard is available to teachers in charge, deputy heads and the head only." />
   }
 
   return <Outlet />

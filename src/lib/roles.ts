@@ -92,6 +92,11 @@ export function isTeacherInCharge(role: UserRole = getRole()): boolean {
   return role === 'teacher-in-charge'
 }
 
+export function getDepartmentScope(): string | null {
+  if (!isTeacherInCharge()) return null
+  return getCurrentUser()?.department?.trim() || ''
+}
+
 export function canManageCalendarItems(role: UserRole = getRole()): boolean {
   return ADMIN_ROLES.includes(role)
 }

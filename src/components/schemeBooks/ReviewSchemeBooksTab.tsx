@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchReviewSchemeBooks } from '../../lib/api'
 import { formatTerm, kraTermKey } from '../../lib/kras'
+import { getDepartmentScope } from '../../lib/roles'
 import {
   SCHEME_BOOK_STATUSES,
   SCHEME_BOOK_STATUS_LABELS,
@@ -22,6 +23,7 @@ function messageFromError(error: unknown): string {
 }
 
 export function ReviewSchemeBooksTab({ onNotice }: ReviewSchemeBooksTabProps) {
+  const departmentScope = getDepartmentScope()
   const [items, setItems] = useState<SchemeBook[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +44,17 @@ export function ReviewSchemeBooksTab({ onNotice }: ReviewSchemeBooksTabProps) {
 
       try {
         const data = await fetchReviewSchemeBooks()
-        if (!cancelled) setItems(data)
+        const scopedData =
+          departmentScope === null
+            ? data
+            : departmentScope
+              ? data.filter(
+                  (item) =>
+                    item.department?.trim().toLowerCase() ===
+                    departmentScope.toLowerCase(),
+                )
+              : []
+        if (!cancelled) setItems(scopedData)
       } catch (loadError) {
         if (!cancelled) setError(messageFromError(loadError))
       } finally {
@@ -55,7 +67,7 @@ export function ReviewSchemeBooksTab({ onNotice }: ReviewSchemeBooksTabProps) {
     return () => {
       cancelled = true
     }
-  }, [version])
+  }, [departmentScope, version])
 
   const departments = useMemo(
     () =>
