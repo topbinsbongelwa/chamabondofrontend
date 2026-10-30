@@ -1,4 +1,4 @@
-import { api, ApiError } from '../lib/api'
+import { api, ApiError, buildApiUrl } from '../lib/api'
 import { getToken } from '../lib/auth'
 import { AI_MOCK_ENABLED, AI_PROVIDER_MODEL } from './constants'
 import type { AiChat, AiMessage, AiPlugin, AiProject, AiSettings } from './types'
@@ -95,15 +95,14 @@ export async function uploadAiFile(
   formData.append('file', file)
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    const baseUrl = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '')
-    xhr.open('POST', `${baseUrl || 'http://localhost:5000'}${API_ROOT}/files`)
+    xhr.open('POST', buildApiUrl(`${API_ROOT}/files`))
     xhr.setRequestHeader('Accept', 'application/json')
     const token = getToken()
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100))
     }
-    xhr.onerror = () => reject(new ApiError('Could not upload the file. Check your connection.'))
+    xhr.onerror = () => reject(new ApiError('Cannot reach the server'))
     xhr.onload = () => {
       if (xhr.status < 200 || xhr.status >= 300) {
         reject(new ApiError(`The upload failed (${xhr.status}).`, xhr.status))

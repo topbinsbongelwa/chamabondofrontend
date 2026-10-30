@@ -39,10 +39,10 @@ import {
 import { normalizeStaffList, type StaffMember } from './staff'
 import { normalizeEcNumber, normalizePhone, type SignupValues } from './validation'
 
-const CONFIGURED_API_URL = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '')
-const API_URL = CONFIGURED_API_URL || 'http://localhost:5000'
+const CONFIGURED_API_URL = (import.meta.env.VITE_API_URL ?? '').trim()
+const API_URL = CONFIGURED_API_URL.replace(/\/+$/, '')
 
-export const isApiConfigured = CONFIGURED_API_URL.length > 0
+export const isApiConfigured = API_URL.length > 0
 
 export class ApiError extends Error {
   status: number
@@ -52,6 +52,50 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
   }
+}
+
+export function buildApiUrl(path: string): string {
+  const rawPath = String(path ?? '').trim()
+
+  if (/^https?:\/\//i.test(rawPath)) return rawPath
+
+  const base = API_URL.replace(/\/+$/, '')
+  let cleanPath = rawPath || '/'
+
+  if (!cleanPath.startsWith('/')) cleanPath = `/${cleanPath}`
+
+  // VITE_API_URL may already end in /api. Drop the duplicate request prefix.
+  if (/\/api$/i.test(base) && /^\/api(\/|$)/i.test(cleanPath)) {
+    cleanPath = cleanPath.slice(4) || '/'
+  }
+
+  // Collapse accidental double slashes in the path only (never in https://).
+  cleanPath = cleanPath.replace(/\/{2,}/g, '/')
+
+  return `${base}${cleanPath}`
+}
+
+function statusMessage(status: number): string {
+  switch (status) {
+    case 401:
+      return 'Wrong EC number or password'
+    case 404:
+      return 'Service not found'
+    case 500:
+      return 'Server error, try again'
+    default:
+      return `The request failed (${status}).`
+  }
+}
+
+function logApiFailure(
+  method: string,
+  url: string,
+  status: number,
+  error: unknown,
+): void {
+  if (!import.meta.env.DEV) return
+  console.error('[api] request failed', { method, url, status, error })
 }
 
 interface RequestOptions {
@@ -95,6 +139,14 @@ function errorMessage(body: unknown): string | undefined {
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true, signal } = options
+  const url = buildApiUrl(path)
+
+  if (!isApiConfigured) {
+    const error = new ApiError('Cannot reach the server')
+    logApiFailure(method, url, 0, error)
+    throw error
+  }
+
   const headers = new Headers({ Accept: 'application/json' })
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
 
@@ -110,7 +162,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   let response: Response
 
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(url, {
       method,
       headers,
       body:
@@ -123,22 +175,31 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     })
   } catch (error) {
     if ((error as { name?: string }).name === 'AbortError') throw error
-    throw new ApiError(
-      'Could not reach the server. Check your connection and try again.',
-    )
-  }
-
-  if (response.status === 401 && auth) {
-    logout()
-    throw new ApiError('Your session has expired. Please log in again.', 401)
+    const apiError = new ApiError('Cannot reach the server')
+    logApiFailure(method, url, 0, error)
+    throw apiError
   }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null)
-    throw new ApiError(
-      errorMessage(errorBody) ?? `The request failed (${response.status}).`,
+    const serverMessage = errorMessage(errorBody)
+
+    if (response.status === 401 && auth) {
+      logout()
+      const apiError = new ApiError(
+        serverMessage ?? 'Your session has expired. Please log in again.',
+        401,
+      )
+      logApiFailure(method, url, response.status, apiError)
+      throw apiError
+    }
+
+    const apiError = new ApiError(
+      serverMessage ?? statusMessage(response.status),
       response.status,
     )
+    logApiFailure(method, url, response.status, apiError)
+    throw apiError
   }
 
   if (response.status === 204) {
@@ -175,8 +236,17 @@ function upload<T>(
   const { method = 'POST', onProgress } = options
 
   return new Promise<T>((resolve, reject) => {
+    const url = buildApiUrl(path)
+
+    if (!isApiConfigured) {
+      const error = new ApiError('Cannot reach the server')
+      logApiFailure(method, url, 0, error)
+      reject(error)
+      return
+    }
+
     const xhr = new XMLHttpRequest()
-    xhr.open(method, `${API_URL}${path}`)
+    xhr.open(method, url)
     xhr.setRequestHeader('Accept', 'application/json')
 
     const token = getToken()
@@ -189,14 +259,6 @@ function upload<T>(
     }
 
     xhr.onload = () => {
-      if (xhr.status === 401) {
-        logout()
-        reject(
-          new ApiError('Your session has expired. Please log in again.', 401),
-        )
-        return
-      }
-
       const text = xhr.responseText
       let payload: unknown = undefined
 
@@ -208,13 +270,24 @@ function upload<T>(
         }
       }
 
-      if (xhr.status < 200 || xhr.status >= 300) {
-        reject(
-          new ApiError(
-            errorMessage(payload) ?? `The upload failed (${xhr.status}).`,
-            xhr.status,
-          ),
+      if (xhr.status === 401) {
+        logout()
+        const apiError = new ApiError(
+          errorMessage(payload) ?? 'Your session has expired. Please log in again.',
+          401,
         )
+        logApiFailure(method, url, xhr.status, apiError)
+        reject(apiError)
+        return
+      }
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const apiError = new ApiError(
+          errorMessage(payload) ?? statusMessage(xhr.status),
+          xhr.status,
+        )
+        logApiFailure(method, url, xhr.status, apiError)
+        reject(apiError)
         return
       }
 
@@ -229,11 +302,9 @@ function upload<T>(
     }
 
     xhr.onerror = () => {
-      reject(
-        new ApiError(
-          'Could not reach the server. Check your connection and try again.',
-        ),
-      )
+      const apiError = new ApiError('Cannot reach the server')
+      logApiFailure(method, url, 0, apiError)
+      reject(apiError)
     }
 
     xhr.onabort = () => {
@@ -402,30 +473,11 @@ export async function signup(values: SignupValues): Promise<SignupResult> {
     return { mocked: true }
   }
 
-  let response: Response
-
-  try {
-    response = await fetch(`${API_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-  } catch {
-    throw new ApiError(
-      'Could not reach the server. Check your connection and try again.',
-    )
-  }
-
-  if (!response.ok) {
-    const body: unknown = await response.json().catch(() => null)
-    throw new ApiError(
-      errorMessage(body) ??
-        'We could not create your account. Please try again.',
-      response.status,
-    )
-  }
-
-  const body: unknown = await response.json().catch(() => ({}))
+  const body = await request<unknown>('/api/auth/register', {
+    method: 'POST',
+    auth: false,
+    body: payload,
+  })
   const record = asRecord(body)
   const token = extractToken(body)
   const user = token ? extractUser(body) : null
@@ -622,22 +674,25 @@ export async function fetchKraDocument(
   const token = getToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
+  const url = buildApiUrl(kraPath(id, '/document'))
   let response: Response
   try {
-    response = await fetch(`${API_URL}${kraPath(id, '/document')}`, { headers })
+    response = await fetch(url, { headers })
   } catch (error) {
     if ((error as { name?: string }).name === 'AbortError') throw error
-    throw new ApiError(
-      'Could not reach the server. Check your connection and try again.',
-    )
+    const apiError = new ApiError('Cannot reach the server')
+    logApiFailure('GET', url, 0, error)
+    throw apiError
   }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null)
-    throw new ApiError(
-      errorMessage(errorBody) ?? `The request failed (${response.status}).`,
+    const apiError = new ApiError(
+      errorMessage(errorBody) ?? statusMessage(response.status),
       response.status,
     )
+    logApiFailure('GET', url, response.status, apiError)
+    throw apiError
   }
 
   const disposition = response.headers.get('Content-Disposition') ?? ''
@@ -652,7 +707,7 @@ export async function getKraDocumentUrl(
   const payload = await request<unknown>(kraPath(id, '/document-link'))
   const url = asString(asRecord(payload)?.url)
   if (!url) throw new ApiError('The server did not return a document link.')
-  return new URL(url, API_URL).toString()
+  return new URL(url, API_URL ? `${API_URL}/` : window.location.origin).toString()
 }
 
 export async function fetchAnnouncements(): Promise<Announcement[]> {
@@ -937,29 +992,35 @@ export async function fetchSchemeBookDocument(
   const token = getToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
+  const url = buildApiUrl(schemeBookPath(id, '/document'))
   let response: Response
   try {
-    response = await fetch(`${API_URL}${schemeBookPath(id, '/document')}`, {
-      headers,
-    })
+    response = await fetch(url, { headers })
   } catch (error) {
     if ((error as { name?: string }).name === 'AbortError') throw error
-    throw new ApiError(
-      'Could not reach the server. Check your connection and try again.',
-    )
+    const apiError = new ApiError('Cannot reach the server')
+    logApiFailure('GET', url, 0, error)
+    throw apiError
   }
 
   if (response.status === 401) {
     logout()
-    throw new ApiError('Your session has expired. Please log in again.', 401)
+    const apiError = new ApiError(
+      'Your session has expired. Please log in again.',
+      401,
+    )
+    logApiFailure('GET', url, response.status, apiError)
+    throw apiError
   }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null)
-    throw new ApiError(
-      errorMessage(errorBody) ?? `The request failed (${response.status}).`,
+    const apiError = new ApiError(
+      errorMessage(errorBody) ?? statusMessage(response.status),
       response.status,
     )
+    logApiFailure('GET', url, response.status, apiError)
+    throw apiError
   }
 
   const disposition = response.headers.get('Content-Disposition') ?? ''
@@ -979,7 +1040,7 @@ export async function getSchemeBookDocumentUrl(
   const payload = await request<unknown>(schemeBookPath(id, '/document-link'))
   const url = asString(asRecord(payload)?.url)
   if (!url) throw new ApiError('The server did not return a file link.')
-  return new URL(url, API_URL).toString()
+  return new URL(url, API_URL ? `${API_URL}/` : window.location.origin).toString()
 }
 
 export async function approveSchemeBook(
