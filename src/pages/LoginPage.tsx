@@ -26,9 +26,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const homePath = getHomePath()
-  const destination =
-    (location.state as LocationState | null)?.from ??
-    (homePath === '/admin' ? homePath : '/updates')
+  const destination = (location.state as LocationState | null)?.from ?? homePath
 
   if (getToken()) {
     return <Navigate to={destination} replace />

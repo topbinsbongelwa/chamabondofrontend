@@ -1,15 +1,7 @@
 const configuredApiUrl = (import.meta.env.VITE_API_URL ?? '').trim()
-const isLocalApiUrl = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(
-  configuredApiUrl,
-)
-const productionFallback = import.meta.env.PROD
-  ? 'https://chamabondobackend.vercel.app'
-  : ''
-const usableApiUrl =
-  configuredApiUrl && !(import.meta.env.PROD && isLocalApiUrl)
-    ? configuredApiUrl
-    : ''
-const resolvedApiUrl = usableApiUrl || productionFallback
+const resolvedApiUrl = import.meta.env.PROD
+  ? '/backend-api/api'
+  : configuredApiUrl
 
 export const API_URL = resolvedApiUrl.replace(/\/+$/, '')
 

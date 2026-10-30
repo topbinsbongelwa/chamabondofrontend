@@ -86,7 +86,19 @@ export default defineConfig(({ mode }) => {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
-          runtimeCaching: [...backendNetworkOnly, ...apiNetworkOnly],
+          runtimeCaching: [
+            ...backendNetworkOnly,
+            {
+              urlPattern: /\/backend-api\/api(?:\/|$)/i,
+              handler: 'NetworkOnly',
+            },
+            ...(['POST', 'PUT', 'PATCH', 'DELETE'] as const).map((method) => ({
+              urlPattern: /\/backend-api\/api(?:\/|$)/i,
+              method,
+              handler: 'NetworkOnly' as const,
+            })),
+            ...apiNetworkOnly,
+          ],
         },
         devOptions: {
           enabled: true,
