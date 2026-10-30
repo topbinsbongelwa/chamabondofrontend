@@ -6,12 +6,16 @@ export function UpdatePrompt() {
   const [updateReady, setUpdateReady] = useState(false)
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null)
 
-  useRegisterSW({
+  const { updateServiceWorker } = useRegisterSW({
     onNeedReload() {
       setUpdateReady(true)
     },
     onRegisteredSW(_swUrl, registration) {
       registrationRef.current = registration ?? null
+      void registration?.update()
+    },
+    onRegisterError(error) {
+      console.error('[pwa] Service worker registration failed', error)
     },
   })
 
@@ -21,7 +25,7 @@ export function UpdatePrompt() {
       void registrationRef.current?.update()
     }
 
-    const interval = window.setInterval(checkForUpdate, 60 * 60 * 1000)
+    const interval = window.setInterval(checkForUpdate, 30 * 60 * 1000)
     document.addEventListener('visibilitychange', checkForUpdate)
 
     return () => {
@@ -29,6 +33,11 @@ export function UpdatePrompt() {
       document.removeEventListener('visibilitychange', checkForUpdate)
     }
   }, [])
+
+  const refresh = () => {
+    setUpdateReady(false)
+    void updateServiceWorker(true).finally(() => window.location.reload())
+  }
 
   if (!updateReady) return null
 
@@ -43,15 +52,17 @@ export function UpdatePrompt() {
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-slate-900">New version available</p>
+        <p className="text-sm font-bold text-slate-900">
+          New version available, refresh
+        </p>
         <p className="mt-0.5 text-xs text-slate-500">
-          Refresh to load the latest Chamabondo updates.
+          Refresh to load the latest Chamabondo build.
         </p>
 
         <div className="mt-2.5 flex items-center gap-2">
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={refresh}
             className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-600"
           >
             <RefreshIcon className="h-3.5 w-3.5" />

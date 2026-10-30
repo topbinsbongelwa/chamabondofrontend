@@ -38,11 +38,14 @@ import {
 } from './schemeBooks'
 import { normalizeStaffList, type StaffMember } from './staff'
 import { normalizeEcNumber, normalizePhone, type SignupValues } from './validation'
+import {
+  API_CONFIG_ERROR,
+  API_URL,
+  buildApiUrl,
+  isApiConfigured,
+} from './config'
 
-const CONFIGURED_API_URL = (import.meta.env.VITE_API_URL ?? '').trim()
-const API_URL = CONFIGURED_API_URL.replace(/\/+$/, '')
-
-export const isApiConfigured = API_URL.length > 0
+export { buildApiUrl, isApiConfigured }
 
 export class ApiError extends Error {
   status: number
@@ -54,27 +57,6 @@ export class ApiError extends Error {
   }
 }
 
-export function buildApiUrl(path: string): string {
-  const rawPath = String(path ?? '').trim()
-
-  if (/^https?:\/\//i.test(rawPath)) return rawPath
-
-  const base = API_URL.replace(/\/+$/, '')
-  let cleanPath = rawPath || '/'
-
-  if (!cleanPath.startsWith('/')) cleanPath = `/${cleanPath}`
-
-  // VITE_API_URL may already end in /api. Drop the duplicate request prefix.
-  if (/\/api$/i.test(base) && /^\/api(\/|$)/i.test(cleanPath)) {
-    cleanPath = cleanPath.slice(4) || '/'
-  }
-
-  // Collapse accidental double slashes in the path only (never in https://).
-  cleanPath = cleanPath.replace(/\/{2,}/g, '/')
-
-  return `${base}${cleanPath}`
-}
-
 function statusMessage(status: number): string {
   switch (status) {
     case 401:
@@ -82,7 +64,7 @@ function statusMessage(status: number): string {
     case 404:
       return 'Service not found'
     case 500:
-      return 'Server error, try again'
+      return 'Server error, please try again'
     default:
       return `The request failed (${status}).`
   }
@@ -92,10 +74,56 @@ function logApiFailure(
   method: string,
   url: string,
   status: number,
+  body: unknown,
   error: unknown,
 ): void {
-  if (!import.meta.env.DEV) return
-  console.error('[api] request failed', { method, url, status, error })
+  console.error(`[api] ${method} ${url} failed`, {
+    method,
+    url,
+    status,
+    body,
+    error,
+  })
+}
+
+function apiErrorForStatus(
+  status: number,
+  auth: boolean,
+  body: unknown,
+): ApiError {
+  const serverMessage = errorMessage(body)
+
+  if (status === 401) {
+    return new ApiError(
+      auth ? 'Your session has expired. Please log in again.' : statusMessage(401),
+      401,
+    )
+  }
+
+  if (status === 404) return new ApiError(statusMessage(404), 404)
+
+  if (status >= 500) {
+    return new ApiError(
+      serverMessage ? `${statusMessage(500)}: ${serverMessage}` : statusMessage(500),
+      status,
+    )
+  }
+
+  return new ApiError(serverMessage ?? statusMessage(status), status)
+}
+
+async function readResponseBody(
+  response: Response,
+): Promise<{ body: unknown; raw: string }> {
+  const raw = await response.text()
+
+  if (!raw) return { body: null, raw }
+
+  try {
+    return { body: JSON.parse(raw) as unknown, raw }
+  } catch {
+    return { body: null, raw }
+  }
 }
 
 interface RequestOptions {
@@ -142,8 +170,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const url = buildApiUrl(path)
 
   if (!isApiConfigured) {
-    const error = new ApiError('Cannot reach the server')
-    logApiFailure(method, url, 0, error)
+    const error = new ApiError(API_CONFIG_ERROR)
+    console.error('[api] API address is not configured', {
+      method,
+      url,
+      VITE_API_URL: import.meta.env.VITE_API_URL,
+    })
     throw error
   }
 
@@ -175,30 +207,17 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     })
   } catch (error) {
     if ((error as { name?: string }).name === 'AbortError') throw error
-    const apiError = new ApiError('Cannot reach the server')
-    logApiFailure(method, url, 0, error)
-    throw apiError
+    console.error('[api] Cannot reach the server', { method, url, error })
+    throw new ApiError('Cannot reach the server')
   }
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null)
-    const serverMessage = errorMessage(errorBody)
+    const { body: errorBody, raw } = await readResponseBody(response)
 
-    if (response.status === 401 && auth) {
-      logout()
-      const apiError = new ApiError(
-        serverMessage ?? 'Your session has expired. Please log in again.',
-        401,
-      )
-      logApiFailure(method, url, response.status, apiError)
-      throw apiError
-    }
+    if (response.status === 401 && auth) logout()
 
-    const apiError = new ApiError(
-      serverMessage ?? statusMessage(response.status),
-      response.status,
-    )
-    logApiFailure(method, url, response.status, apiError)
+    const apiError = apiErrorForStatus(response.status, auth, errorBody)
+    logApiFailure(method, url, response.status, errorBody ?? raw, apiError)
     throw apiError
   }
 
@@ -239,8 +258,12 @@ function upload<T>(
     const url = buildApiUrl(path)
 
     if (!isApiConfigured) {
-      const error = new ApiError('Cannot reach the server')
-      logApiFailure(method, url, 0, error)
+      const error = new ApiError(API_CONFIG_ERROR)
+      console.error('[api] API address is not configured', {
+        method,
+        url,
+        VITE_API_URL: import.meta.env.VITE_API_URL,
+      })
       reject(error)
       return
     }
@@ -270,23 +293,10 @@ function upload<T>(
         }
       }
 
-      if (xhr.status === 401) {
-        logout()
-        const apiError = new ApiError(
-          errorMessage(payload) ?? 'Your session has expired. Please log in again.',
-          401,
-        )
-        logApiFailure(method, url, xhr.status, apiError)
-        reject(apiError)
-        return
-      }
-
       if (xhr.status < 200 || xhr.status >= 300) {
-        const apiError = new ApiError(
-          errorMessage(payload) ?? statusMessage(xhr.status),
-          xhr.status,
-        )
-        logApiFailure(method, url, xhr.status, apiError)
+        if (xhr.status === 401) logout()
+        const apiError = apiErrorForStatus(xhr.status, true, payload)
+        logApiFailure(method, url, xhr.status, payload ?? text, apiError)
         reject(apiError)
         return
       }
@@ -303,7 +313,8 @@ function upload<T>(
 
     xhr.onerror = () => {
       const apiError = new ApiError('Cannot reach the server')
-      logApiFailure(method, url, 0, apiError)
+      console.error('[api] Cannot reach the server', { method, url })
+      logApiFailure(method, url, 0, null, apiError)
       reject(apiError)
     }
 
@@ -675,23 +686,28 @@ export async function fetchKraDocument(
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
   const url = buildApiUrl(kraPath(id, '/document'))
+
+  if (!isApiConfigured) {
+    console.error('[api] API address is not configured', { method: 'GET', url })
+    throw new ApiError(API_CONFIG_ERROR)
+  }
+
   let response: Response
   try {
     response = await fetch(url, { headers })
   } catch (error) {
     if ((error as { name?: string }).name === 'AbortError') throw error
-    const apiError = new ApiError('Cannot reach the server')
-    logApiFailure('GET', url, 0, error)
-    throw apiError
+    console.error('[api] Cannot reach the server', { method: 'GET', url, error })
+    throw new ApiError('Cannot reach the server')
   }
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null)
-    const apiError = new ApiError(
-      errorMessage(errorBody) ?? statusMessage(response.status),
-      response.status,
-    )
-    logApiFailure('GET', url, response.status, apiError)
+    const { body: errorBody, raw } = await readResponseBody(response)
+
+    if (response.status === 401) logout()
+
+    const apiError = apiErrorForStatus(response.status, true, errorBody)
+    logApiFailure('GET', url, response.status, errorBody ?? raw, apiError)
     throw apiError
   }
 
@@ -993,33 +1009,28 @@ export async function fetchSchemeBookDocument(
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
   const url = buildApiUrl(schemeBookPath(id, '/document'))
+
+  if (!isApiConfigured) {
+    console.error('[api] API address is not configured', { method: 'GET', url })
+    throw new ApiError(API_CONFIG_ERROR)
+  }
+
   let response: Response
   try {
     response = await fetch(url, { headers })
   } catch (error) {
     if ((error as { name?: string }).name === 'AbortError') throw error
-    const apiError = new ApiError('Cannot reach the server')
-    logApiFailure('GET', url, 0, error)
-    throw apiError
-  }
-
-  if (response.status === 401) {
-    logout()
-    const apiError = new ApiError(
-      'Your session has expired. Please log in again.',
-      401,
-    )
-    logApiFailure('GET', url, response.status, apiError)
-    throw apiError
+    console.error('[api] Cannot reach the server', { method: 'GET', url, error })
+    throw new ApiError('Cannot reach the server')
   }
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null)
-    const apiError = new ApiError(
-      errorMessage(errorBody) ?? statusMessage(response.status),
-      response.status,
-    )
-    logApiFailure('GET', url, response.status, apiError)
+    const { body: errorBody, raw } = await readResponseBody(response)
+
+    if (response.status === 401) logout()
+
+    const apiError = apiErrorForStatus(response.status, true, errorBody)
+    logApiFailure('GET', url, response.status, errorBody ?? raw, apiError)
     throw apiError
   }
 

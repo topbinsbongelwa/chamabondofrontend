@@ -8,7 +8,7 @@ import {
   EyeOffIcon,
   SpinnerIcon,
 } from '../components/icons'
-import { login } from '../lib/api'
+import { ApiError, login } from '../lib/api'
 import { getToken } from '../lib/auth'
 import { getHomePath } from '../lib/roles'
 
@@ -49,11 +49,17 @@ export function LoginPage() {
       await login({ ecNumber, password })
       navigate(destination === '/login' ? homePath : destination, { replace: true })
     } catch (loginError) {
-      setError(
-        loginError instanceof Error
-          ? loginError.message
-          : 'We could not sign you in. Please try again.',
-      )
+      console.error('[login] Sign-in failed', loginError)
+
+      if (loginError instanceof ApiError && loginError.status === 401) {
+        setError('Wrong EC number or password')
+      } else {
+        setError(
+          loginError instanceof Error
+            ? loginError.message
+            : 'We could not sign you in. Please try again.',
+        )
+      }
     } finally {
       setSubmitting(false)
     }

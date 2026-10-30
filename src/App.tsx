@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminRoute } from './components/AdminRoute'
+import { ApiConfigNotice } from './components/ApiConfigNotice'
 import { RoleRoute } from './components/RoleRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
@@ -17,6 +18,7 @@ import { AccountPage } from './pages/AccountPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { CalendarPage } from './pages/CalendarPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { DebugPage } from './pages/DebugPage'
 import { KrasPage } from './pages/KrasPage'
 import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -33,6 +35,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/debug" element={<DebugPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
@@ -84,6 +87,7 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
+      <ApiConfigNotice />
       <OfflineBanner />
       <InstallAppButton />
       <UpdatePrompt />
