@@ -67,8 +67,11 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-22023736'], (function (workbox) { 'use strict';
+define(['./workbox-9f2d5e12'], (function (workbox) { 'use strict';
 
+  workbox.setCacheNameDetails({
+    prefix: "chamabondo-v2"
+  });
   self.skipWaiting();
   workbox.clientsClaim();
   /**
@@ -78,28 +81,22 @@ define(['./workbox-22023736'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "/index.html",
-    "revision": "0.tl4orn8n7k4"
+    "revision": "0.cac0mi7vfrg"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
     allowlist: [/^\/$/],
-    denylist: [/^\/api\//]
+    denylist: [/^\/api/]
   }));
-  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'GET');
-  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'POST');
-  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'PUT');
-  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'PATCH');
-  workbox.registerRoute(/\/api\/ai(?:\/|$)/i, new workbox.NetworkOnly(), 'DELETE');
-  workbox.registerRoute(/\/api\/auth\/.*/i, new workbox.NetworkOnly(), 'GET');
-  workbox.registerRoute(/\/api\/.*/i, new workbox.NetworkFirst({
-    "cacheName": "chamabondo-api",
-    "networkTimeoutSeconds": 4,
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 80,
-      maxAgeSeconds: 86400
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
-    })]
-  }), 'GET');
+  workbox.registerRoute(/^http:\/\/localhost:5000\//i, new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(/^http:\/\/localhost:5000\//i, new workbox.NetworkOnly(), 'POST');
+  workbox.registerRoute(/^http:\/\/localhost:5000\//i, new workbox.NetworkOnly(), 'PUT');
+  workbox.registerRoute(/^http:\/\/localhost:5000\//i, new workbox.NetworkOnly(), 'PATCH');
+  workbox.registerRoute(/^http:\/\/localhost:5000\//i, new workbox.NetworkOnly(), 'DELETE');
+  workbox.registerRoute(/\/api(?:\/|$)/i, new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(/\/api(?:\/|$)/i, new workbox.NetworkOnly(), 'POST');
+  workbox.registerRoute(/\/api(?:\/|$)/i, new workbox.NetworkOnly(), 'PUT');
+  workbox.registerRoute(/\/api(?:\/|$)/i, new workbox.NetworkOnly(), 'PATCH');
+  workbox.registerRoute(/\/api(?:\/|$)/i, new workbox.NetworkOnly(), 'DELETE');
 
 }));
