@@ -1,10 +1,25 @@
+import { useMemo } from 'react'
 import { StaffDirectory } from '../components/admin/StaffDirectory'
 import { StaffStats } from '../components/admin/StaffStats'
 import { useStaffDirectory } from '../hooks/useStaffDirectory'
-import { getRoleLabel } from '../lib/roles'
+import { getDepartmentScope, getRoleLabel } from '../lib/roles'
 
 export function AdminStaffPage() {
   const { staff, loading, error, reload } = useStaffDirectory()
+  const department = getDepartmentScope()
+  const scopedStaff = useMemo(
+    () =>
+      staff.filter((member) =>
+        department === null
+          ? true
+          : Boolean(
+              department &&
+                member.department?.trim().toLowerCase() ===
+                  department.toLowerCase(),
+            ),
+      ),
+    [department, staff],
+  )
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5 sm:space-y-6">
@@ -22,14 +37,18 @@ export function AdminStaffPage() {
         </div>
 
         <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gold-700">
-          {getRoleLabel()}
+          {department !== null
+            ? department
+              ? `${department} department`
+              : 'Department not assigned'
+            : getRoleLabel()}
         </span>
       </div>
 
-      <StaffStats staff={staff} loading={loading} error={error} />
+      <StaffStats staff={scopedStaff} loading={loading} error={error} />
 
       <StaffDirectory
-        staff={staff}
+        staff={scopedStaff}
         loading={loading}
         error={error}
         onRetry={reload}

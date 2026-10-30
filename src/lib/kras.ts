@@ -14,6 +14,9 @@ export interface Kra {
   department: string | null
   teacherId: string | number | null
   teacherName: string | null
+  documentId: string | null
+  documentName: string | null
+  documentSize: number | null
   createdAt: string | null
   updatedAt: string | null
 }
@@ -258,6 +261,9 @@ export function normalizeKra(value: unknown): Kra | null {
         'ownerName',
         'owner_name',
       ]),
+    documentId: pickString(source, ['documentId', 'document_id']),
+    documentName: pickString(source, ['documentName', 'document_name']),
+    documentSize: asNumber(source.documentSize ?? source.document_size),
     createdAt: pickString(source, ['createdAt', 'created_at', 'submittedAt']),
     updatedAt: pickString(source, ['updatedAt', 'updated_at', 'reviewedAt']),
   }

@@ -5,20 +5,44 @@ import {
   type AttendanceRecord,
   type AttendanceSummary,
 } from './attendance'
+import {
+  normalizeRangeStats,
+  normalizeSchoolStats,
+  type AttendanceRangeStats,
+  type SchoolAttendanceStats,
+} from './attendanceStats'
 import { getToken, logout, setToken, setUser, type StoredUser } from './auth'
+import {
+  normalizeAnnouncement,
+  normalizeAnnouncementList,
+  type Announcement,
+  type AnnouncementInput,
+} from './announcements'
+import {
+  normalizeCalendarItem,
+  normalizeCalendarList,
+  type CalendarItem,
+  type CalendarItemInput,
+} from './calendar'
 import {
   normalizeKra,
   normalizeKraList,
   type Kra,
   type KraInput,
 } from './kras'
+import {
+  normalizeSchemeBook,
+  normalizeSchemeBookList,
+  type SchemeBook,
+  type SchemeBookInput,
+} from './schemeBooks'
 import { normalizeStaffList, type StaffMember } from './staff'
 import { normalizeEcNumber, normalizePhone, type SignupValues } from './validation'
 
-const CONFIGURED_API_URL = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '')
-const API_URL = CONFIGURED_API_URL || 'http://localhost:5000'
+const CONFIGURED_API_URL = (import.meta.env.VITE_API_URL ?? '').trim()
+const API_URL = CONFIGURED_API_URL.replace(/\/+$/, '')
 
-export const isApiConfigured = CONFIGURED_API_URL.length > 0
+export const isApiConfigured = API_URL.length > 0
 
 export class ApiError extends Error {
   status: number
@@ -28,6 +52,50 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
   }
+}
+
+export function buildApiUrl(path: string): string {
+  const rawPath = String(path ?? '').trim()
+
+  if (/^https?:\/\//i.test(rawPath)) return rawPath
+
+  const base = API_URL.replace(/\/+$/, '')
+  let cleanPath = rawPath || '/'
+
+  if (!cleanPath.startsWith('/')) cleanPath = `/${cleanPath}`
+
+  // VITE_API_URL may already end in /api. Drop the duplicate request prefix.
+  if (/\/api$/i.test(base) && /^\/api(\/|$)/i.test(cleanPath)) {
+    cleanPath = cleanPath.slice(4) || '/'
+  }
+
+  // Collapse accidental double slashes in the path only (never in https://).
+  cleanPath = cleanPath.replace(/\/{2,}/g, '/')
+
+  return `${base}${cleanPath}`
+}
+
+function statusMessage(status: number): string {
+  switch (status) {
+    case 401:
+      return 'Wrong EC number or password'
+    case 404:
+      return 'Service not found'
+    case 500:
+      return 'Server error, try again'
+    default:
+      return `The request failed (${status}).`
+  }
+}
+
+function logApiFailure(
+  method: string,
+  url: string,
+  status: number,
+  error: unknown,
+): void {
+  if (!import.meta.env.DEV) return
+  console.error('[api] request failed', { method, url, status, error })
 }
 
 interface RequestOptions {
@@ -71,9 +139,18 @@ function errorMessage(body: unknown): string | undefined {
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true, signal } = options
-  const headers = new Headers({ Accept: 'application/json' })
+  const url = buildApiUrl(path)
 
-  if (body !== undefined) {
+  if (!isApiConfigured) {
+    const error = new ApiError('Cannot reach the server')
+    logApiFailure(method, url, 0, error)
+    throw error
+  }
+
+  const headers = new Headers({ Accept: 'application/json' })
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+
+  if (body !== undefined && !isFormData) {
     headers.set('Content-Type', 'application/json')
   }
 
@@ -85,30 +162,44 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   let response: Response
 
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(url, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? (body as FormData)
+            : JSON.stringify(body),
       signal,
     })
   } catch (error) {
     if ((error as { name?: string }).name === 'AbortError') throw error
-    throw new ApiError(
-      'Could not reach the server. Check your connection and try again.',
-    )
-  }
-
-  if (response.status === 401 && auth) {
-    logout()
-    throw new ApiError('Your session has expired. Please log in again.', 401)
+    const apiError = new ApiError('Cannot reach the server')
+    logApiFailure(method, url, 0, error)
+    throw apiError
   }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null)
-    throw new ApiError(
-      errorMessage(errorBody) ?? `The request failed (${response.status}).`,
+    const serverMessage = errorMessage(errorBody)
+
+    if (response.status === 401 && auth) {
+      logout()
+      const apiError = new ApiError(
+        serverMessage ?? 'Your session has expired. Please log in again.',
+        401,
+      )
+      logApiFailure(method, url, response.status, apiError)
+      throw apiError
+    }
+
+    const apiError = new ApiError(
+      serverMessage ?? statusMessage(response.status),
       response.status,
     )
+    logApiFailure(method, url, response.status, apiError)
+    throw apiError
   }
 
   if (response.status === 204) {
@@ -123,6 +214,105 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   } catch {
     return text as unknown as T
   }
+}
+
+export function api<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  return request<T>(path, options)
+}
+
+interface UploadOptions {
+  method?: 'POST' | 'PATCH'
+  onProgress?: (percent: number) => void
+}
+
+function upload<T>(
+  path: string,
+  body: FormData,
+  options: UploadOptions = {},
+): Promise<T> {
+  const { method = 'POST', onProgress } = options
+
+  return new Promise<T>((resolve, reject) => {
+    const url = buildApiUrl(path)
+
+    if (!isApiConfigured) {
+      const error = new ApiError('Cannot reach the server')
+      logApiFailure(method, url, 0, error)
+      reject(error)
+      return
+    }
+
+    const xhr = new XMLHttpRequest()
+    xhr.open(method, url)
+    xhr.setRequestHeader('Accept', 'application/json')
+
+    const token = getToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || !onProgress) return
+      const percent = Math.round((event.loaded / event.total) * 100)
+      onProgress(Math.min(100, Math.max(0, percent)))
+    }
+
+    xhr.onload = () => {
+      const text = xhr.responseText
+      let payload: unknown = undefined
+
+      if (text) {
+        try {
+          payload = JSON.parse(text) as unknown
+        } catch {
+          payload = text
+        }
+      }
+
+      if (xhr.status === 401) {
+        logout()
+        const apiError = new ApiError(
+          errorMessage(payload) ?? 'Your session has expired. Please log in again.',
+          401,
+        )
+        logApiFailure(method, url, xhr.status, apiError)
+        reject(apiError)
+        return
+      }
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const apiError = new ApiError(
+          errorMessage(payload) ?? statusMessage(xhr.status),
+          xhr.status,
+        )
+        logApiFailure(method, url, xhr.status, apiError)
+        reject(apiError)
+        return
+      }
+
+      onProgress?.(100)
+
+      if (xhr.status === 204 || !text) {
+        resolve(undefined as T)
+        return
+      }
+
+      resolve(payload as T)
+    }
+
+    xhr.onerror = () => {
+      const apiError = new ApiError('Cannot reach the server')
+      logApiFailure(method, url, 0, apiError)
+      reject(apiError)
+    }
+
+    xhr.onabort = () => {
+      reject(new ApiError('The upload was cancelled.'))
+    }
+
+    xhr.send(body)
+  })
 }
 
 function authPayload(body: unknown): {
@@ -172,11 +362,18 @@ function extractUser(body: unknown): StoredUser | null {
     fullName: asString(candidate.fullName) ?? asString(candidate.full_name),
     ecNumber: asString(candidate.ecNumber) ?? asString(candidate.ec_number),
     email: asString(candidate.email),
+    phone:
+      asString(candidate.phone) ??
+      asString(candidate.phoneNumber) ??
+      asString(candidate.phone_number),
     department: asString(candidate.department),
     role: asString(candidate.role),
     userRole: asString(candidate.userRole) ?? asString(candidate.user_role),
     position: asString(candidate.position),
     title: asString(candidate.title),
+    plan: asString(candidate.plan),
+    subscriptionPlan:
+      asString(candidate.subscriptionPlan) ?? asString(candidate.subscription_plan),
     isAdmin: asBoolean(candidate.isAdmin) ?? asBoolean(candidate.is_admin),
     approved:
       asBoolean(candidate.approved) ??
@@ -193,6 +390,26 @@ export interface LoginCredentials {
 export interface LoginResult {
   token: string
   user: StoredUser | null
+}
+
+export interface ProfileUpdates {
+  email: string
+  phone: string
+}
+
+export async function updateMyProfile(
+  updates: ProfileUpdates,
+): Promise<StoredUser> {
+  const payload = await request<unknown>('/api/auth/me', {
+    method: 'PATCH',
+    body: updates,
+  })
+  const record = asRecord(payload)
+  const user = extractUser(record?.user)
+
+  if (!user) throw new ApiError('The server returned an invalid profile.')
+  setUser(user)
+  return user
 }
 
 export async function login(credentials: LoginCredentials): Promise<LoginResult> {
@@ -256,30 +473,11 @@ export async function signup(values: SignupValues): Promise<SignupResult> {
     return { mocked: true }
   }
 
-  let response: Response
-
-  try {
-    response = await fetch(`${API_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-  } catch {
-    throw new ApiError(
-      'Could not reach the server. Check your connection and try again.',
-    )
-  }
-
-  if (!response.ok) {
-    const body: unknown = await response.json().catch(() => null)
-    throw new ApiError(
-      errorMessage(body) ??
-        'We could not create your account. Please try again.',
-      response.status,
-    )
-  }
-
-  const body: unknown = await response.json().catch(() => ({}))
+  const body = await request<unknown>('/api/auth/register', {
+    method: 'POST',
+    auth: false,
+    body: payload,
+  })
   const record = asRecord(body)
   const token = extractToken(body)
   const user = token ? extractUser(body) : null
@@ -341,9 +539,66 @@ export async function fetchAttendanceSummary(): Promise<AttendanceSummary> {
   return normalizeSummary(payload)
 }
 
-export async function fetchMyAttendance(): Promise<AttendanceRecord[]> {
-  const payload = await request<unknown>('/api/attendance/me')
+export async function fetchMyAttendance(
+  month?: string,
+): Promise<AttendanceRecord[]> {
+  const query = month?.trim()
+    ? `?month=${encodeURIComponent(month.trim())}`
+    : ''
+  const payload = await request<unknown>(`/api/attendance/me${query}`)
   return normalizeRecords(payload)
+}
+
+function queryString(
+  values: Record<string, string | undefined>,
+): string {
+  const params = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(values)) {
+    const trimmed = value?.trim()
+    if (trimmed) params.set(key, trimmed)
+  }
+
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}
+
+export interface AttendanceStatsQuery {
+  from?: string
+  to?: string
+}
+
+export interface SchoolAttendanceStatsQuery extends AttendanceStatsQuery {
+  department?: string
+  teacherId?: string
+}
+
+export async function fetchAttendanceStats(
+  query: AttendanceStatsQuery = {},
+): Promise<AttendanceRangeStats> {
+  const payload = await request<unknown>(
+    `/api/attendance/stats${queryString({
+      from: query.from,
+      to: query.to,
+    })}`,
+  )
+
+  return normalizeRangeStats(payload, query)
+}
+
+export async function fetchSchoolAttendanceStats(
+  query: SchoolAttendanceStatsQuery = {},
+): Promise<SchoolAttendanceStats> {
+  const payload = await request<unknown>(
+    `/api/attendance/stats/school${queryString({
+      from: query.from,
+      to: query.to,
+      department: query.department,
+      teacherId: query.teacherId,
+    })}`,
+  )
+
+  return normalizeSchoolStats(payload, query)
 }
 
 export async function fetchStaffDirectory(): Promise<StaffMember[]> {
@@ -378,13 +633,16 @@ export async function fetchReviewKras(): Promise<Kra[]> {
 export async function createKra(
   input: KraInput,
   submit: boolean,
+  file?: File | null,
 ): Promise<Kra | null> {
+  const body = new FormData()
+  Object.entries(input).forEach(([key, value]) => body.append(key, value))
+  body.append('status', submit ? 'pending' : 'draft')
+  if (file) body.append('document', file)
+
   const payload = await request<unknown>('/api/kras', {
     method: 'POST',
-    body: {
-      ...input,
-      status: submit ? 'pending' : 'draft',
-    },
+    body,
   })
 
   return normalizeKra(payload)
@@ -394,16 +652,235 @@ export async function updateKra(
   id: string | number,
   input: KraInput,
   submit: boolean,
+  file?: File | null,
 ): Promise<Kra | null> {
+  const body = new FormData()
+  Object.entries(input).forEach(([key, value]) => body.append(key, value))
+  body.append('status', submit ? 'pending' : 'draft')
+  if (file) body.append('document', file)
+
   const payload = await request<unknown>(kraPath(id), {
     method: 'PATCH',
-    body: {
-      ...input,
-      status: submit ? 'pending' : 'draft',
-    },
+    body,
   })
 
   return normalizeKra(payload)
+}
+
+export async function fetchKraDocument(
+  id: string | number,
+): Promise<{ blob: Blob; filename: string }> {
+  const headers = new Headers()
+  const token = getToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  const url = buildApiUrl(kraPath(id, '/document'))
+  let response: Response
+  try {
+    response = await fetch(url, { headers })
+  } catch (error) {
+    if ((error as { name?: string }).name === 'AbortError') throw error
+    const apiError = new ApiError('Cannot reach the server')
+    logApiFailure('GET', url, 0, error)
+    throw apiError
+  }
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null)
+    const apiError = new ApiError(
+      errorMessage(errorBody) ?? statusMessage(response.status),
+      response.status,
+    )
+    logApiFailure('GET', url, response.status, apiError)
+    throw apiError
+  }
+
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const filename =
+    disposition.match(/filename="([^"]+)"/i)?.[1] ?? 'kra-document'
+  return { blob: await response.blob(), filename }
+}
+
+export async function getKraDocumentUrl(
+  id: string | number,
+): Promise<string> {
+  const payload = await request<unknown>(kraPath(id, '/document-link'))
+  const url = asString(asRecord(payload)?.url)
+  if (!url) throw new ApiError('The server did not return a document link.')
+  return new URL(url, API_URL ? `${API_URL}/` : window.location.origin).toString()
+}
+
+export async function fetchAnnouncements(): Promise<Announcement[]> {
+  const payload = await request<unknown>('/api/announcements')
+  return normalizeAnnouncementList(payload)
+}
+
+export async function createAnnouncement(
+  input: AnnouncementInput,
+): Promise<Announcement> {
+  const payload = await request<unknown>('/api/announcements', {
+    method: 'POST',
+    body: input,
+  })
+  const announcement = normalizeAnnouncement(asRecord(payload)?.announcement)
+  if (!announcement) {
+    throw new ApiError('The server returned an invalid school update.')
+  }
+  return announcement
+}
+
+export async function updateAnnouncement(
+  id: string,
+  input: AnnouncementInput,
+): Promise<Announcement> {
+  const payload = await request<unknown>(
+    `/api/announcements/${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      body: input,
+    },
+  )
+  const announcement = normalizeAnnouncement(asRecord(payload)?.announcement)
+  if (!announcement) {
+    throw new ApiError('The server returned an invalid school update.')
+  }
+  return announcement
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  await request<void>(`/api/announcements/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+}
+
+export interface CalendarItemsQuery {
+  from?: string
+  to?: string
+  type?: string
+  category?: string
+}
+
+function calendarPath(id: string | number, suffix = ''): string {
+  return `/api/calendar/${encodeURIComponent(String(id))}${suffix}`
+}
+
+function calendarPayload(input: CalendarItemInput): Record<string, unknown> {
+  return {
+    type: input.type,
+    title: input.title.trim(),
+    description: input.description.trim(),
+    startDate: input.startDate,
+    endDate: input.endDate || null,
+    allDay: input.allDay,
+    startTime: input.allDay ? null : input.startTime || null,
+    endTime: input.allDay ? null : input.endTime || null,
+    venue: input.venue.trim() || null,
+    category: input.category,
+    audience: input.audience,
+    department:
+      input.audience === 'department' ? input.department.trim() || null : null,
+    assignedTeacherIds: input.assignedTeacherIds,
+    priority: input.priority,
+    pinned: input.pinned,
+    expiresAt: input.expiresAt || null,
+  }
+}
+
+function calendarResultItem(payload: unknown): CalendarItem | null {
+  const record = asRecord(payload)
+  return (
+    normalizeCalendarItem(record?.item) ??
+    normalizeCalendarItem(record?.event) ??
+    normalizeCalendarItem(record?.calendarItem) ??
+    normalizeCalendarItem(payload)
+  )
+}
+
+export async function fetchCalendarItems(
+  query: CalendarItemsQuery = {},
+): Promise<CalendarItem[]> {
+  const payload = await request<unknown>(
+    `/api/calendar${queryString({
+      from: query.from,
+      to: query.to,
+      type: query.type,
+      category: query.category,
+    })}`,
+  )
+  return normalizeCalendarList(payload)
+}
+
+export async function fetchUpcomingCalendarItems(
+  limit = 5,
+): Promise<CalendarItem[]> {
+  const payload = await request<unknown>(
+    `/api/calendar/upcoming${queryString({
+      limit: String(Math.max(1, limit)),
+    })}`,
+  )
+  return normalizeCalendarList(payload)
+}
+
+export async function createCalendarItem(
+  input: CalendarItemInput,
+): Promise<CalendarItem> {
+  const payload = await request<unknown>('/api/calendar', {
+    method: 'POST',
+    body: calendarPayload(input),
+  })
+  const item = calendarResultItem(payload)
+
+  if (!item) {
+    throw new ApiError('The server returned an invalid calendar item.')
+  }
+
+  return item
+}
+
+export async function updateCalendarItem(
+  id: string,
+  input: CalendarItemInput,
+): Promise<CalendarItem> {
+  const payload = await request<unknown>(calendarPath(id), {
+    method: 'PATCH',
+    body: calendarPayload(input),
+  })
+  const item = calendarResultItem(payload)
+
+  if (!item) {
+    throw new ApiError('The server returned an invalid calendar item.')
+  }
+
+  return item
+}
+
+export async function deleteCalendarItem(id: string): Promise<void> {
+  await request<void>(calendarPath(id), { method: 'DELETE' })
+}
+
+export async function setCalendarItemPinned(
+  id: string,
+  pinned: boolean,
+): Promise<CalendarItem | null> {
+  try {
+    const payload = await request<unknown>(calendarPath(id, '/pin'), {
+      method: 'PATCH',
+      body: { pinned },
+    })
+    return calendarResultItem(payload)
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.status === 405)
+    ) {
+      const payload = await request<unknown>(calendarPath(id), {
+        method: 'PATCH',
+        body: { pinned },
+      })
+      return calendarResultItem(payload)
+    }
+    throw error
+  }
 }
 
 export async function deleteKra(id: string | number): Promise<void> {
@@ -440,4 +917,150 @@ export async function rejectKra(
   })
 
   return normalizeKra(payload)
+}
+
+function schemeBookPath(id: string | number, suffix = ''): string {
+  return `/api/scheme-books/${encodeURIComponent(String(id))}${suffix}`
+}
+
+function appendSchemeBookInput(body: FormData, input: SchemeBookInput): void {
+  body.append('title', input.title)
+  body.append('subject', input.subject)
+  body.append('grade', input.grade)
+  body.append('term', input.term)
+  body.append('year', input.year)
+  body.append('weekFrom', input.weekFrom)
+  body.append('weekTo', input.weekTo)
+  body.append('notes', input.notes)
+}
+
+export async function fetchSchemeBooks(): Promise<SchemeBook[]> {
+  const payload = await request<unknown>('/api/scheme-books')
+  return normalizeSchemeBookList(payload)
+}
+
+export async function fetchReviewSchemeBooks(): Promise<SchemeBook[]> {
+  const payload = await request<unknown>('/api/scheme-books/review')
+  return normalizeSchemeBookList(payload)
+}
+
+export async function createSchemeBook(
+  input: SchemeBookInput,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<SchemeBook | null> {
+  const body = new FormData()
+  appendSchemeBookInput(body, input)
+  body.append('status', 'pending')
+  body.append('document', file)
+
+  const payload = await upload<unknown>('/api/scheme-books', body, {
+    method: 'POST',
+    onProgress,
+  })
+
+  return normalizeSchemeBook(payload)
+}
+
+export async function resubmitSchemeBook(
+  id: string | number,
+  input: SchemeBookInput,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<SchemeBook | null> {
+  const body = new FormData()
+  appendSchemeBookInput(body, input)
+  body.append('status', 'pending')
+  body.append('document', file)
+
+  const payload = await upload<unknown>(schemeBookPath(id), body, {
+    method: 'PATCH',
+    onProgress,
+  })
+
+  return normalizeSchemeBook(payload)
+}
+
+export async function deleteSchemeBook(id: string | number): Promise<void> {
+  await request<void>(schemeBookPath(id), { method: 'DELETE' })
+}
+
+export async function fetchSchemeBookDocument(
+  id: string | number,
+): Promise<{ blob: Blob; filename: string; contentType: string | null }> {
+  const headers = new Headers()
+  const token = getToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  const url = buildApiUrl(schemeBookPath(id, '/document'))
+  let response: Response
+  try {
+    response = await fetch(url, { headers })
+  } catch (error) {
+    if ((error as { name?: string }).name === 'AbortError') throw error
+    const apiError = new ApiError('Cannot reach the server')
+    logApiFailure('GET', url, 0, error)
+    throw apiError
+  }
+
+  if (response.status === 401) {
+    logout()
+    const apiError = new ApiError(
+      'Your session has expired. Please log in again.',
+      401,
+    )
+    logApiFailure('GET', url, response.status, apiError)
+    throw apiError
+  }
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null)
+    const apiError = new ApiError(
+      errorMessage(errorBody) ?? statusMessage(response.status),
+      response.status,
+    )
+    logApiFailure('GET', url, response.status, apiError)
+    throw apiError
+  }
+
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const filename =
+    disposition.match(/filename="([^"]+)"/i)?.[1] ?? 'scheme-book-file'
+
+  return {
+    blob: await response.blob(),
+    filename,
+    contentType: response.headers.get('Content-Type'),
+  }
+}
+
+export async function getSchemeBookDocumentUrl(
+  id: string | number,
+): Promise<string> {
+  const payload = await request<unknown>(schemeBookPath(id, '/document-link'))
+  const url = asString(asRecord(payload)?.url)
+  if (!url) throw new ApiError('The server did not return a file link.')
+  return new URL(url, API_URL ? `${API_URL}/` : window.location.origin).toString()
+}
+
+export async function approveSchemeBook(
+  id: string | number,
+): Promise<SchemeBook | null> {
+  const payload = await request<unknown>(schemeBookPath(id, '/approve'), {
+    method: 'PATCH',
+  })
+
+  return normalizeSchemeBook(payload)
+}
+
+export async function rejectSchemeBook(
+  id: string | number,
+  comment: string,
+): Promise<SchemeBook | null> {
+  const payload = await request<unknown>(schemeBookPath(id, '/reject'), {
+    method: 'PATCH',
+    body: { comment },
+  })
+
+  return normalizeSchemeBook(payload)
 }

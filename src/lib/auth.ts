@@ -6,11 +6,14 @@ export interface StoredUser {
   fullName?: string
   ecNumber?: string
   email?: string
+  phone?: string
   department?: string
   role?: string
   userRole?: string
   position?: string
   title?: string
+  plan?: string
+  subscriptionPlan?: string
   isAdmin?: boolean
   approved?: boolean
 }
@@ -134,11 +137,17 @@ function getUserFromToken(): StoredUser | null {
     fullName: asString(source.fullName) ?? asString(source.full_name),
     ecNumber: asString(source.ecNumber) ?? asString(source.ec_number),
     email: asString(source.email),
+    phone:
+      asString(source.phone) ??
+      asString(source.phoneNumber) ??
+      asString(source.phone_number),
     department: asString(source.department),
     role: asString(source.role),
     userRole: asString(source.userRole) ?? asString(source.user_role),
     position: asString(source.position),
     title: asString(source.title),
+    plan: asString(source.plan),
+    subscriptionPlan: asString(source.subscriptionPlan) ?? asString(source.subscription_plan),
     isAdmin: asBoolean(source.isAdmin) ?? asBoolean(source.is_admin),
     approved:
       asBoolean(source.approved) ??

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { getDisplayName, getInitials, logout } from '../../lib/auth'
-import { getRoleLabel } from '../../lib/roles'
+import { getRole, getRoleLabel } from '../../lib/roles'
+import { AiChatProvider } from '../../hooks/useChat'
+import { FloatingAssistant } from '../ai/FloatingAssistant'
 import { Crest } from '../Crest'
 import { CloseIcon, LogoutIcon, MenuIcon } from '../icons'
-import { InstallAppButton } from '../pwa/InstallAppButton'
-import { ADMIN_LINKS, Sidebar, TEACHER_LINKS } from './Sidebar'
+import { adminLinksForRole, Sidebar, TEACHER_LINKS } from './Sidebar'
 
 interface DashboardLayoutProps {
   variant?: 'teacher' | 'admin'
@@ -21,7 +22,7 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
   const isAdminView = variant === 'admin'
   const homePath = isAdminView ? '/admin' : '/'
   const portalLabel = isAdminView ? 'Admin Portal' : 'Teacher Portal'
-  const navLinks = isAdminView ? ADMIN_LINKS : TEACHER_LINKS
+  const navLinks = isAdminView ? adminLinksForRole(getRole()) : TEACHER_LINKS
 
   useEffect(() => {
     setMenuOpen(false)
@@ -47,6 +48,7 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
   }, [menuOpen])
 
   return (
+    <AiChatProvider>
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="h-0.5 w-full bg-gradient-to-r from-primary via-gold to-primary" />
@@ -75,12 +77,14 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
           </Link>
 
           <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
-            <InstallAppButton />
-
             <div className="min-w-0 text-right">
-              <p className="max-w-[88px] truncate text-xs font-semibold text-slate-800 sm:max-w-[180px] sm:text-sm">
+              <Link
+                to="/account"
+                aria-label="Open account settings"
+                className="block max-w-[88px] truncate text-xs font-semibold text-slate-800 transition hover:text-primary sm:max-w-[180px] sm:text-sm"
+              >
                 {teacherName}
-              </p>
+              </Link>
               <p className="hidden text-[10px] font-medium uppercase tracking-wide text-slate-400 sm:block">
                 {roleLabel}
               </p>
@@ -182,6 +186,13 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
                     {teacherName}
                   </p>
                   <p className="text-xs text-slate-500">{roleLabel}</p>
+                  <Link
+                    to="/account"
+                    onClick={() => setMenuOpen(false)}
+                    className="mt-1 inline-flex text-xs font-semibold text-primary hover:text-primary-700"
+                  >
+                    Account settings
+                  </Link>
                 </div>
               </div>
             </div>
@@ -207,5 +218,7 @@ export function DashboardLayout({ variant = 'teacher' }: DashboardLayoutProps) {
         </div>
       ) : null}
     </div>
+    <FloatingAssistant />
+    </AiChatProvider>
   )
 }

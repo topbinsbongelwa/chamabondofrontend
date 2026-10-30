@@ -48,6 +48,7 @@ export function KraFormModal({
   onSaved,
 }: KraFormModalProps) {
   const [values, setValues] = useState<KraInput>(emptyValues)
+  const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState<SaveMode | null>(null)
 
@@ -66,6 +67,7 @@ export function KraFormModal({
           }
         : emptyValues(),
     )
+    setFile(null)
     setError(null)
     setSaving(null)
   }, [open, kra])
@@ -98,14 +100,19 @@ export function KraFormModal({
       return
     }
 
+    if (mode === 'submit' && !file && !kra?.documentId) {
+      setError('Attach a PDF, DOC, or DOCX document before submitting.')
+      return
+    }
+
     setSaving(mode)
     setError(null)
 
     try {
       if (kra) {
-        await updateKra(kra.id, payload, mode === 'submit')
+        await updateKra(kra.id, payload, mode === 'submit', file)
       } else {
-        await createKra(payload, mode === 'submit')
+        await createKra(payload, mode === 'submit', file)
       }
 
       onSaved(
@@ -305,6 +312,36 @@ export function KraFormModal({
               ))}
             </select>
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="kra-document" className="label">
+            Supporting soft-copy document
+          </label>
+          <input
+            id="kra-document"
+            type="file"
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            disabled={busy}
+            onChange={(event) => {
+              const selected = event.target.files?.[0] ?? null
+              if (selected && selected.size > 3 * 1000 * 1000 * 1000) {
+                setFile(null)
+                setError('The document must be 3 GB or smaller.')
+                event.target.value = ''
+                return
+              }
+              setFile(selected)
+              setError(null)
+            }}
+            className="input h-auto min-h-[44px] py-2"
+          />
+          <p className="hint">
+            PDF, DOC, or DOCX up to 3 GB. Attach a document to submit for review.
+            {kra?.documentName && !file
+              ? ` Current file: ${kra.documentName}`
+              : ''}
+          </p>
         </div>
       </form>
     </Modal>

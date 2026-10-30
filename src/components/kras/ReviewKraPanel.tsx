@@ -8,6 +8,7 @@ import {
   SpinnerIcon,
 } from '../icons'
 import { KraStatusBadge } from './KraStatusBadge'
+import { KraDocumentDownload } from './KraDocumentDownload'
 
 interface ReviewKraPanelProps {
   kra: Kra
@@ -173,6 +174,8 @@ export function ReviewKraPanel({
               {kra.description || 'No description provided.'}
             </p>
           </section>
+
+          <KraDocumentDownload kra={kra} />
 
           <section className="mt-4 grid gap-2 sm:grid-cols-2">
             <div className="rounded-xl border border-slate-200 p-3">

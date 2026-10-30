@@ -49,6 +49,15 @@ export default defineConfig({
         skipWaiting: true,
         runtimeCaching: [
           {
+            urlPattern: /\/api\/ai(?:\/|$)/i,
+            handler: 'NetworkOnly',
+          },
+          ...(['POST', 'PUT', 'PATCH', 'DELETE'] as const).map((method) => ({
+            urlPattern: /\/api\/ai(?:\/|$)/i,
+            method,
+            handler: 'NetworkOnly' as const,
+          })),
+          {
             urlPattern: /\/api\/auth\/.*/i,
             handler: 'NetworkOnly',
           },
@@ -70,13 +79,22 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: false,
+        enabled: true,
       },
     }),
   ],
   server: {
     port: 5173,
     host: true,
+    strictPort: true,
+    open: true,
+    proxy: {
+      '/api/ai/ask': {
+        target: 'https://intellli-ai.netlify.app',
+        changeOrigin: true,
+        rewrite: () => '/api/ask',
+      },
+    },
   },
   build: {
     target: 'es2019',

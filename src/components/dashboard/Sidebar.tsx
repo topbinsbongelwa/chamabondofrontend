@@ -6,20 +6,25 @@ import {
   ChartBarIcon,
   CheckIcon,
   DashboardIcon,
+  MegaphoneIcon,
   NotebookIcon,
+  SparklesIcon,
   TargetIcon,
   UsersIcon,
 } from '../icons'
+import type { UserRole } from '../../lib/roles'
 
 export interface NavItem {
   to: string
   label: string
   icon: ComponentType<SVGProps<SVGSVGElement>>
   end?: boolean
+  headOnly?: boolean
 }
 
 export const TEACHER_LINKS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: DashboardIcon, end: true },
+  { to: '/ai-assistant', label: 'AI Assistant', icon: SparklesIcon },
   { to: '/attendance', label: 'Attendance', icon: CheckIcon },
   { to: '/kras', label: 'KRAs', icon: TargetIcon },
   { to: '/scheme-books', label: 'Scheme Books', icon: BookIcon },
@@ -30,11 +35,18 @@ export const TEACHER_LINKS: NavItem[] = [
 export const ADMIN_LINKS: NavItem[] = [
   { to: '/admin', label: 'Overview', icon: DashboardIcon, end: true },
   { to: '/admin/staff', label: 'Staff', icon: UsersIcon },
+  { to: '/admin/communications', label: 'Communications', icon: MegaphoneIcon },
   { to: '/admin/kras', label: 'KRAs', icon: TargetIcon },
+  { to: '/admin/scheme-books', label: 'Scheme Books', icon: BookIcon },
   { to: '/admin/attendance', label: 'Attendance', icon: CheckIcon },
   { to: '/admin/reports', label: 'Reports', icon: ChartBarIcon },
   { to: '/admin/calendar', label: 'Calendar', icon: CalendarIcon },
+  { to: '/admin/audit', label: 'Audit log', icon: NotebookIcon, headOnly: true },
 ]
+
+export function adminLinksForRole(role: UserRole): NavItem[] {
+  return ADMIN_LINKS.filter((item) => !item.headOnly || role === 'head')
+}
 
 interface SidebarProps {
   links?: NavItem[]

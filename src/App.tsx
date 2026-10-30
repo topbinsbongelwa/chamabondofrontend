@@ -1,23 +1,31 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminRoute } from './components/AdminRoute'
+import { RoleRoute } from './components/RoleRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
-import {
-  BookIcon,
-  CalendarIcon,
-  ChartBarIcon,
-  CheckIcon,
-  NotebookIcon,
-} from './components/icons'
+import { NotebookIcon } from './components/icons'
 import { OfflineBanner } from './components/pwa/OfflineBanner'
+import { InstallAppButton } from './components/pwa/InstallAppButton'
 import { UpdatePrompt } from './components/pwa/UpdatePrompt'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
+import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
+import { AdminAuditLogPage } from './pages/AdminAuditLogPage'
 import { AdminStaffPage } from './pages/AdminStaffPage'
+import { AdminReportsPage } from './pages/AdminReportsPage'
+import { AccountPage } from './pages/AccountPage'
+import { AttendancePage } from './pages/AttendancePage'
+import { CalendarPage } from './pages/CalendarPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { KrasPage } from './pages/KrasPage'
 import { LoginPage } from './pages/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { SchemeBooksPage } from './pages/SchemeBooksPage'
 import { SignupPage } from './pages/SignupPage'
+
+const AiAssistantPage = lazy(() =>
+  import('./pages/AiAssistantPage').then((module) => ({ default: module.AiAssistantPage })),
+)
 
 export default function App() {
   return (
@@ -30,26 +38,15 @@ export default function App() {
           <Route element={<DashboardLayout />}>
             <Route index element={<DashboardPage />} />
             <Route
-              path="attendance"
-              element={
-                <PlaceholderPage
-                  title="Attendance"
-                  description="Your full attendance history, filters and monthly reports will live here."
-                  icon={CheckIcon}
-                />
-              }
+              path="updates"
+              element={<Navigate to="/calendar?tab=updates" replace />}
             />
+            <Route path="ai-assistant" element={<Suspense fallback={<div className="p-6 text-sm text-slate-500">Loading Intelli AI…</div>}><AiAssistantPage /></Suspense>} />
+            <Route path="account" element={<AccountPage />} />
+            <Route path="profile" element={<Navigate to="/account" replace />} />
+            <Route path="attendance" element={<AttendancePage />} />
             <Route path="kras" element={<KrasPage />} />
-            <Route
-              path="scheme-books"
-              element={
-                <PlaceholderPage
-                  title="Scheme Books"
-                  description="Prepare and submit your scheme books from your phone. This page is coming soon."
-                  icon={BookIcon}
-                />
-              }
-            />
+            <Route path="scheme-books" element={<SchemeBooksPage />} />
             <Route
               path="logbook"
               element={
@@ -60,16 +57,7 @@ export default function App() {
                 />
               }
             />
-            <Route
-              path="calendar"
-              element={
-                <PlaceholderPage
-                  title="Calendar"
-                  description="School meetings, deadlines and activities will appear here. This page is coming soon."
-                  icon={CalendarIcon}
-                />
-              }
-            />
+            <Route path="calendar" element={<CalendarPage />} />
           </Route>
         </Route>
 
@@ -77,37 +65,19 @@ export default function App() {
           <Route path="/admin" element={<DashboardLayout variant="admin" />}>
             <Route index element={<AdminDashboardPage />} />
             <Route path="staff" element={<AdminStaffPage />} />
+            <Route path="communications" element={<AdminAnnouncementsPage />} />
+            <Route path="announcements" element={<Navigate to="/admin/communications" replace />} />
             <Route path="kras" element={<KrasPage />} />
+            <Route path="scheme-books" element={<SchemeBooksPage />} />
             <Route
               path="attendance"
-              element={
-                <PlaceholderPage
-                  title="School attendance"
-                  description="School-wide attendance records, filters and staff reports will live here."
-                  icon={CheckIcon}
-                />
-              }
+              element={<AttendancePage defaultTab="school" />}
             />
-            <Route
-              path="reports"
-              element={
-                <PlaceholderPage
-                  title="Reports"
-                  description="Attendance reports and staff summaries will be available here."
-                  icon={ChartBarIcon}
-                />
-              }
-            />
-            <Route
-              path="calendar"
-              element={
-                <PlaceholderPage
-                  title="School calendar"
-                  description="School meetings, deadlines and staff activities will appear here."
-                  icon={CalendarIcon}
-                />
-              }
-            />
+            <Route path="reports" element={<AdminReportsPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
+            <Route element={<RoleRoute allowedRoles={['head']} />}>
+              <Route path="audit" element={<AdminAuditLogPage />} />
+            </Route>
           </Route>
         </Route>
 
@@ -115,6 +85,7 @@ export default function App() {
       </Routes>
 
       <OfflineBanner />
+      <InstallAppButton />
       <UpdatePrompt />
     </BrowserRouter>
   )

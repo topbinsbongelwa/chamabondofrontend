@@ -3,6 +3,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string
+  readonly VITE_AI_MOCK?: string
+  readonly VITE_WHATSAPP_GROUP_URL?: string
 }
 
 interface ImportMeta {

@@ -8,6 +8,7 @@ import {
   type Kra,
   type KraStatus,
 } from '../../lib/kras'
+import { getDepartmentScope } from '../../lib/roles'
 import {
   AlertIcon,
   RefreshIcon,
@@ -27,6 +28,7 @@ function messageFromError(error: unknown): string {
 }
 
 export function ReviewKrasTab({ onNotice }: ReviewKrasTabProps) {
+  const departmentScope = getDepartmentScope()
   const [items, setItems] = useState<Kra[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +49,17 @@ export function ReviewKrasTab({ onNotice }: ReviewKrasTabProps) {
 
       try {
         const data = await fetchReviewKras()
-        if (!cancelled) setItems(data)
+        const scopedData =
+          departmentScope === null
+            ? data
+            : departmentScope
+              ? data.filter(
+                  (item) =>
+                    item.department?.trim().toLowerCase() ===
+                    departmentScope.toLowerCase(),
+                )
+              : []
+        if (!cancelled) setItems(scopedData)
       } catch (loadError) {
         if (!cancelled) setError(messageFromError(loadError))
       } finally {
@@ -60,7 +72,7 @@ export function ReviewKrasTab({ onNotice }: ReviewKrasTabProps) {
     return () => {
       cancelled = true
     }
-  }, [version])
+  }, [departmentScope, version])
 
   const departments = useMemo(
     () =>
