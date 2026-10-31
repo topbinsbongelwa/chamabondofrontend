@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/backend-api/api/(.*)",
-      "destination": "https://chamabondobackend.vercel.app/api/$1"
+      "destination": "https://chamasbts.vercel.app/api/$1"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ],

@@ -1,6 +1,7 @@
 const configuredApiUrl = (import.meta.env.VITE_API_URL ?? '').trim()
+const defaultProdApiUrl = 'https://chamasbts.vercel.app/api'
 const resolvedApiUrl = import.meta.env.PROD
-  ? '/backend-api/api'
+  ? (configuredApiUrl || defaultProdApiUrl)
   : configuredApiUrl
 
 export const API_URL = resolvedApiUrl.replace(/\/+$/, '')
@@ -24,7 +25,7 @@ function normalisePath(path: string): string {
 
   if (!cleanPath.startsWith('/')) cleanPath = `/${cleanPath}`
 
-  cleanPath = cleanPath.replace(/\/{2,}/g, '/')
+  cleanPath = cleanPath.replace(/\/ {2,}/g, '/')
 
   if (/\/api$/i.test(API_URL) && /^\/api(\/|$)/i.test(cleanPath)) {
     cleanPath = cleanPath.slice(4) || '/'
